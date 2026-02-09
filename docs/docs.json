@@ -23,20 +23,6 @@
     }
   },
   "navigation": {
-    "tabs": [
-      {
-        "tab": "Documentation",
-        "href": "/"
-      },
-      {
-        "tab": "SDK Reference",
-        "href": "/sdk"
-      },
-      {
-        "tab": "CLI",
-        "href": "/cli"
-      }
-    ],
     "groups": [
       {
         "group": "Getting Started",
@@ -57,7 +43,7 @@
         ]
       },
       {
-        "group": "SDK",
+        "group": "SDK Reference",
         "pages": [
           "sdk/overview",
           "sdk/policy-builder",
@@ -68,7 +54,7 @@
         ]
       },
       {
-        "group": "CLI",
+        "group": "CLI Reference",
         "pages": [
           "cli/overview",
           "cli/commands"
