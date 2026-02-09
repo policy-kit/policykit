@@ -8,7 +8,11 @@
     "light": "#818CF8",
     "dark": "#4F46E5"
   },
-  "favicon": "/favicon.png",
+  "logo": {
+    "light": "/logo.png",
+    "dark": "/logo.png"
+  },
+  "favicon": "/logo.png",
   "navbar": {
     "links": [
       {

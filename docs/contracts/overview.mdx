@@ -20,28 +20,19 @@ import { IRuleEvaluator } from "@policykit/contracts/src/rules/IRuleEvaluator.so
 
 ## Contract Architecture
 
-```
-┌─────────────────────────────────────────────────┐
-│              Smart Account                      │
-│  ┌──────────────┐  ┌────────────────────────┐   │
-│  │ PolicyGuard   │  │ PolicyKit7579Module    │   │
-│  │  (Guard)      │  │  (ERC-7579 Validator) │   │
-│  └──────┬───────┘  └───────────┬────────────┘   │
-└─────────┼──────────────────────┼────────────────┘
-          │                      │
-          └──────────┬───────────┘
-                     │
-              ┌──────▼──────┐
-              │ PolicyEngine │
-              │  (Core)      │
-              └──────┬──────┘
-                     │
-      ┌──────────────┼──────────────┐
-      │              │              │
-┌─────▼─────┐ ┌─────▼─────┐ ┌─────▼──────────┐
-│ Tier 1     │ │ Tier 2     │ │ Attestation    │
-│ Evaluators │ │ Evaluators │ │ Verifier       │
-└────────────┘ └────────────┘ └────────────────┘
+```mermaid
+graph TD
+  subgraph SA["Smart Account"]
+    PG["PolicyGuard<br/>(Guard)"]
+    PM["PolicyKit7579Module<br/>(ERC-7579 Validator)"]
+  end
+
+  PG --> PE["PolicyEngine<br/>(Core)"]
+  PM --> PE
+
+  PE --> T1["Tier 1<br/>Evaluators"]
+  PE --> T2["Tier 2<br/>Evaluators"]
+  PE --> AV["Attestation<br/>Verifier"]
 ```
 
 ## Core Contracts

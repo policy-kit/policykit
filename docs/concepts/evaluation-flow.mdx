@@ -143,18 +143,23 @@ The signed attestation is returned to the SDK, which includes it with the transa
 
 ### 7. Final Decision
 
-```
-All Tier 1 rules pass?  ──No──→  ❌ REJECTED
-         │ Yes
-All Tier 2 rules pass?  ──No──→  ❌ REJECTED
-         │ Yes
-Has off-chain rules?    ──No──→  ✅ ALLOWED
-         │ Yes
-Valid attestation?      ──No──→  Fail mode closed? ──Yes──→ ❌ REJECTED
-         │ Yes                          │ No
-         ▼                              ▼
-    ✅ ALLOWED                     ✅ ALLOWED
-                               (on-chain only)
+```mermaid
+flowchart TD
+  T1{"All Tier 1<br/>rules pass?"}
+  T1 -- "No" --> R1["❌ REJECTED"]
+  T1 -- "Yes" --> T2{"All Tier 2<br/>rules pass?"}
+
+  T2 -- "No" --> R2["❌ REJECTED"]
+  T2 -- "Yes" --> OC{"Has off-chain<br/>rules?"}
+
+  OC -- "No" --> A1["✅ ALLOWED"]
+  OC -- "Yes" --> ATT{"Valid<br/>attestation?"}
+
+  ATT -- "Yes" --> A2["✅ ALLOWED"]
+  ATT -- "No" --> FM{"Fail mode<br/>closed?"}
+
+  FM -- "Yes" --> R3["❌ REJECTED"]
+  FM -- "No" --> A3["✅ ALLOWED<br/>(on-chain only)"]
 ```
 
 ## Error Handling

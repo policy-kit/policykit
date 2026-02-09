@@ -9,34 +9,22 @@ PolicyKit is designed as a layered system where each component has a clear respo
 
 ## System Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Your Application                       │
-│                                                             │
-│   ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│   │ PolicyBuilder│  │  PolicyKit   │  │ PolicySimulator  │  │
-│   │   (build)   │  │  (deploy)    │  │    (test)        │  │
-│   └──────┬──────┘  └──────┬───────┘  └──────────────────┘  │
-└──────────┼────────────────┼─────────────────────────────────┘
-           │                │
-           ▼                ▼
-┌──────────────┐   ┌───────────────┐
-│     IPFS     │   │  On-Chain     │
-│  (storage)   │   │  PolicyEngine │
-└──────────────┘   └───────┬───────┘
-                           │
-                   ┌───────┴───────┐
-                   │               │
-            ┌──────▼──────┐ ┌─────▼──────┐
-            │  On-Chain   │ │  Off-Chain  │
-            │  Rules      │ │  Rules      │
-            │  (Tier 1+2) │ │  (Tier 3)   │
-            └─────────────┘ └─────┬──────┘
-                                  │
-                           ┌──────▼──────┐
-                           │ Lit Protocol │
-                           │   Network    │
-                           └─────────────┘
+```mermaid
+graph TD
+  subgraph App["Your Application"]
+    PB["PolicyBuilder<br/>(build)"]
+    PK["PolicyKit<br/>(deploy)"]
+    PS["PolicySimulator<br/>(test)"]
+  end
+
+  PB --> IPFS["IPFS<br/>(storage)"]
+  PK --> IPFS
+  PK --> PE["On-Chain<br/>PolicyEngine"]
+
+  PE --> OnChain["On-Chain Rules<br/>(Tier 1 + 2)"]
+  PE --> OffChain["Off-Chain Rules<br/>(Tier 3)"]
+
+  OffChain --> Lit["Lit Protocol<br/>Network"]
 ```
 
 ## Component Responsibilities

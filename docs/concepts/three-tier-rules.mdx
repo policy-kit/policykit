@@ -9,35 +9,36 @@ PolicyKit organizes rules into three tiers based on where and how they are evalu
 
 ## Overview
 
-```
-┌────────────────────────────────────────────────────────┐
-│                     Transaction                        │
-└───────────────────────┬────────────────────────────────┘
-                        │
-                        ▼
-┌────────────────────────────────────────────────────────┐
-│  Tier 1: Stateless On-Chain                            │
-│  ✓ ALLOW_TARGETS  ✓ DENY_TARGETS  ✓ MAX_VALUE         │
-│  ✓ ALLOW_SELECTORS  ✓ DENY_SELECTORS                  │
-│  Cost: Low  │  Trust: Trustless  │  Speed: Instant     │
-└───────────────────────┬────────────────────────────────┘
-                        │ Pass
-                        ▼
-┌────────────────────────────────────────────────────────┐
-│  Tier 2: Stateful On-Chain                             │
-│  ✓ SPEND_LIMIT  ✓ COOLDOWN                             │
-│  Cost: Medium  │  Trust: Trustless  │  Speed: Instant  │
-└───────────────────────┬────────────────────────────────┘
-                        │ Pass
-                        ▼
-┌────────────────────────────────────────────────────────┐
-│  Tier 3: Off-Chain (Lit Protocol)                      │
-│  ✓ MAX_SLIPPAGE_BPS  ✓ REQUIRE_SIMULATION  ✓ CUSTOM   │
-│  Cost: Low  │  Trust: Decentralized TEE  │  Speed: ~2s │
-└───────────────────────┬────────────────────────────────┘
-                        │ Pass
-                        ▼
-                  ✅ Transaction Allowed
+```mermaid
+flowchart TD
+  TX["Transaction"]
+  TX --> T1
+
+  subgraph T1["Tier 1: Stateless On-Chain"]
+    direction LR
+    T1a["ALLOW_TARGETS"] ~~~ T1b["DENY_TARGETS"] ~~~ T1c["MAX_VALUE"]
+    T1d["ALLOW_SELECTORS"] ~~~ T1e["DENY_SELECTORS"]
+  end
+
+  T1 -- "Pass" --> T2
+
+  subgraph T2["Tier 2: Stateful On-Chain"]
+    direction LR
+    T2a["SPEND_LIMIT"] ~~~ T2b["COOLDOWN"]
+  end
+
+  T2 -- "Pass" --> T3
+
+  subgraph T3["Tier 3: Off-Chain · Lit Protocol"]
+    direction LR
+    T3a["MAX_SLIPPAGE_BPS"] ~~~ T3b["REQUIRE_SIMULATION"] ~~~ T3c["CUSTOM"]
+  end
+
+  T3 -- "Pass" --> OK["✅ Transaction Allowed"]
+
+  T1 -- "Fail" --> NO["❌ Rejected"]
+  T2 -- "Fail" --> NO
+  T3 -- "Fail" --> NO
 ```
 
 Rules are evaluated sequentially: Tier 1 first, then Tier 2, then Tier 3. If any rule fails at any tier, the transaction is rejected immediately.
