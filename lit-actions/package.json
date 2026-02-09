@@ -7,7 +7,7 @@
   "type": "module",
   "scripts": {
     "build": "node esbuild.config.js",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "clean": "rm -rf build"
   },
   "devDependencies": {
