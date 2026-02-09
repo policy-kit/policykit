@@ -1,0 +1,25 @@
+{
+  "name": "@policykit/contracts",
+  "version": "0.1.0",
+  "description": "Solidity smart contracts for PolicyKit — decentralized policies-as-code for smart accounts and agents",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "src/**/*.sol"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "clean": "forge clean"
+  },
+  "keywords": [
+    "solidity",
+    "smart-contracts",
+    "policy-engine",
+    "erc-7579",
+    "smart-accounts",
+    "ethereum"
+  ]
+}

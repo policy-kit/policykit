@@ -1,10 +1,16 @@
 {
   "name": "@policykit/lit-actions",
   "version": "0.1.0",
-  "private": true,
   "description": "Lit Protocol v8 (Naga) Actions for PolicyKit off-chain policy evaluation",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "build",
+    "src"
+  ],
   "scripts": {
     "build": "node esbuild.config.js",
     "test": "vitest run --passWithNoTests",

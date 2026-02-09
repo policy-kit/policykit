@@ -52,18 +52,18 @@ The TypeScript SDK is the primary interface for building and managing policies. 
 - `LitClient` — Integration with Lit Protocol v8
 - `IPFSClient` — IPFS pinning and retrieval
 
-### 2. Smart Contracts
+### 2. Smart Contracts (`@policykit/contracts`)
 
-Solidity contracts deployed on-chain that enforce policy rules:
+Solidity contracts deployed on-chain that enforce policy rules. Available as an [npm package](https://www.npmjs.com/package/@policykit/contracts) for use in your own Solidity projects:
 
 - `PolicyEngine` — Core contract that stores and evaluates policies
 - `PolicyGuard` — Guard module for smart accounts
 - `PolicyKit7579Module` — ERC-7579 compatible module
 - Rule evaluators — Individual contracts for each rule type
 
-### 3. Lit Actions
+### 3. Lit Actions (`@policykit/lit-actions`)
 
-JavaScript/TypeScript code executed on the Lit Protocol network for off-chain rule evaluation. The Lit Action:
+TypeScript code executed on the Lit Protocol network for off-chain rule evaluation. Available as an [npm package](https://www.npmjs.com/package/@policykit/lit-actions) containing the pre-built action bundle and source rules. The Lit Action:
 
 1. Fetches the full policy from IPFS
 2. Evaluates Tier 3 (off-chain) rules

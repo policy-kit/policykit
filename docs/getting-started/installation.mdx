@@ -68,9 +68,43 @@ Verify the installation:
 policykit --version
 ```
 
-## Smart Contracts (Development)
+## Smart Contracts
 
-If you're developing or extending the smart contracts, you'll need [Foundry](https://book.getfoundry.sh/):
+Install the Solidity contracts as a dependency for your own contracts:
+
+<CodeGroup>
+
+```bash Foundry
+forge install policy-kit/policykit
+```
+
+```bash npm
+npm install @policykit/contracts
+```
+
+```bash pnpm
+pnpm add @policykit/contracts
+```
+
+</CodeGroup>
+
+Then import the contracts in your Solidity code:
+
+```solidity
+import { IPolicyEngine } from "@policykit/contracts/src/core/IPolicyEngine.sol";
+import { IRuleEvaluator } from "@policykit/contracts/src/rules/IRuleEvaluator.sol";
+```
+
+<Note>
+  If using Foundry with the npm package, add a remapping to your `remappings.txt`:
+  ```
+  @policykit/contracts/=node_modules/@policykit/contracts/
+  ```
+</Note>
+
+### Local Development
+
+If you're developing or extending the smart contracts themselves, you'll need [Foundry](https://book.getfoundry.sh/):
 
 ```bash
 curl -L https://foundry.paradigm.xyz | bash
@@ -84,12 +118,33 @@ cd contracts
 forge install
 ```
 
+## Lit Actions
+
+Install the Lit Actions package to get the pre-built policy evaluator bundle for off-chain rule evaluation:
+
+<CodeGroup>
+
+```bash pnpm
+pnpm add @policykit/lit-actions
+```
+
+```bash npm
+npm install @policykit/lit-actions
+```
+
+</CodeGroup>
+
+The package includes:
+
+- **Pre-built bundle** at `build/policyEvaluator.action.js` — upload this to IPFS and pass the CID to the SDK's `LitClient`
+- **Source rules** in `src/rules/` — use as reference or starting points for custom rule implementations
+
 ## Monorepo Setup (Contributing)
 
 To work on PolicyKit itself:
 
 ```bash
-git clone https://github.com/policykit/policykit.git
+git clone https://github.com/policy-kit/policykit.git
 cd policykit
 pnpm install
 pnpm build

@@ -154,10 +154,16 @@ const EIP712_TYPES = {
 
 To use Tier 3 rules, you need:
 
-1. **Lit Action deployed to IPFS** — The `policyEvaluator.action.ts` from the `lit-actions` package
+1. **Lit Action deployed to IPFS** — Install `@policykit/lit-actions` and upload the pre-built bundle at `build/policyEvaluator.action.js` to IPFS to get the CID
 2. **PKP (Programmable Key Pair)** — Provisioned through Lit Protocol
 3. **Capacity Credits** — To pay for Lit network usage
 
+```bash
+pnpm add @policykit/lit-actions
+```
+
+The `@policykit/lit-actions` package includes the pre-built action bundle ready for IPFS upload, as well as the source rule implementations in `src/rules/` that you can use as reference for custom rules.
+
 <Note>
-  The `LitClient` requires peer dependencies: `@lit-protocol/lit-node-client`, `@lit-protocol/constants`, and `@lit-protocol/auth-helpers`. Install them separately.
+  The `LitClient` requires peer dependencies: `@lit-protocol/lit-client`, `@lit-protocol/networks`, and `@lit-protocol/auth`. Install them separately.
 </Note>

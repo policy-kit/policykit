@@ -37,6 +37,12 @@ jobs:
       - name: Build
         run: pnpm build
 
+      - name: Publish @policykit/contracts
+        run: pnpm publish --no-git-checks --access public
+        working-directory: contracts
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
       - name: Publish @policykit/sdk
         run: pnpm publish --no-git-checks --access public
         working-directory: sdk
@@ -46,5 +52,11 @@ jobs:
       - name: Publish @policykit/cli
         run: pnpm publish --no-git-checks --access public
         working-directory: cli
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @policykit/lit-actions
+        run: pnpm publish --no-git-checks --access public
+        working-directory: lit-actions
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

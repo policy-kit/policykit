@@ -7,6 +7,17 @@ description: Overview of PolicyKit's smart contracts
 
 PolicyKit's on-chain layer consists of Solidity contracts built with [Foundry](https://book.getfoundry.sh/). These contracts store policy configurations, evaluate on-chain rules, and verify off-chain attestations.
 
+The contracts are published as [`@policykit/contracts`](https://www.npmjs.com/package/@policykit/contracts) on npm, so you can import them directly in your own Solidity projects:
+
+```bash
+pnpm add @policykit/contracts
+```
+
+```solidity
+import { IPolicyEngine } from "@policykit/contracts/src/core/IPolicyEngine.sol";
+import { IRuleEvaluator } from "@policykit/contracts/src/rules/IRuleEvaluator.sol";
+```
+
 ## Contract Architecture
 
 ```
