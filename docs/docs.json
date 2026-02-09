@@ -13,13 +13,13 @@
     "links": [
       {
         "label": "GitHub",
-        "href": "https://github.com/policy-kit"
+        "href": "https://github.com/policy-kit/policykit"
       }
     ]
   },
   "footer": {
     "socials": {
-      "github": "https://github.com/policy-kit"
+      "github": "https://github.com/policy-kit/policykit"
     }
   },
   "navigation": {
