@@ -1,0 +1,211 @@
+---
+title: Commands
+description: Detailed reference for all CLI commands
+---
+
+# CLI Commands
+
+## `init`
+
+Initialize a new policy file from a template.
+
+```bash
+policykit init [options]
+```
+
+### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--template <name>` | Template to use | `basic` |
+| `--output <path>` | Output file path | `./policy.json` |
+| `--name <name>` | Policy name/ID | Prompted |
+
+### Templates
+
+| Template | Description |
+|----------|-------------|
+| `basic` | Minimal policy with target allowlist and value limit |
+| `smart-account` | ERC-7579 smart account with comprehensive rules |
+| `agent-wallet` | AI agent wallet with strict guardrails |
+| `dao-guard` | DAO treasury execution guard |
+
+### Example
+
+```bash
+policykit init --template smart-account --output ./my-policy.json
+```
+
+---
+
+## `deploy`
+
+Deploy a policy to IPFS and register it on-chain.
+
+```bash
+policykit deploy [options]
+```
+
+### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--policy <path>` | Path to policy JSON file | Required |
+| `--chain <chain>` | Target chain | `base-sepolia` |
+| `--engine <address>` | PolicyEngine contract address | From env |
+| `--pkp <address>` | PKP address for attestations | Auto-provisioned |
+
+### Example
+
+```bash
+policykit deploy \
+  --policy ./my-policy.json \
+  --chain base-sepolia \
+  --engine 0x1234...5678
+```
+
+### Output
+
+```
+Pinning policy to IPFS...
+  CID: QmXyz123...
+
+Encoding on-chain rules...
+  Tier 1 rules: 3
+  Tier 2 rules: 2
+  Encoded size: 256 bytes
+
+Deploying to PolicyEngine...
+  Tx hash: 0xabc...def
+  Block: 12345678
+
+Policy deployed successfully.
+```
+
+---
+
+## `simulate`
+
+Simulate a transaction against a policy locally.
+
+```bash
+policykit simulate [options]
+```
+
+### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--policy <path>` | Path to policy JSON file | Required |
+| `--target <address>` | Transaction target address | Required |
+| `--value <ether>` | ETH value (in ether) | `0` |
+| `--data <hex>` | Transaction calldata | `0x` |
+| `--verbose` | Show detailed per-rule results | `false` |
+
+### Example
+
+```bash
+policykit simulate \
+  --policy ./my-policy.json \
+  --target 0xUniswapRouter \
+  --value 0.5 \
+  --data 0x38ed1739... \
+  --verbose
+```
+
+### Output
+
+```
+Evaluating policy: my-first-policy
+
+Tier 1 (Stateless On-Chain):
+  ✅ ALLOW_TARGETS — 0xUniswapRouter is allowed
+  ✅ MAX_VALUE — 0.5 ETH ≤ 10 ETH
+
+Tier 2 (Stateful On-Chain):
+  ✅ SPEND_LIMIT — 0 / 50,000 USDC used
+  ✅ COOLDOWN — No previous transaction
+
+Tier 3 (Off-Chain):
+  ⚠️  MAX_SLIPPAGE_BPS — Skipped (simulation mode)
+  ⚠️  REQUIRE_SIMULATION — Skipped (simulation mode)
+
+Result: ✅ ALLOWED (Tier 3 rules skipped in simulation)
+```
+
+---
+
+## `inspect`
+
+Inspect the active policy for an account.
+
+```bash
+policykit inspect [options]
+```
+
+### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--account <address>` | Smart account address | Required |
+| `--chain <chain>` | Target chain | `base-sepolia` |
+| `--engine <address>` | PolicyEngine contract address | From env |
+| `--full` | Fetch and display the full policy from IPFS | `false` |
+
+### Example
+
+```bash
+policykit inspect \
+  --account 0xMySmartAccount \
+  --chain base-sepolia \
+  --full
+```
+
+### Output
+
+```
+Policy for 0xMySmartAccount:
+
+  CID:          QmXyz123...
+  PKP Address:  0xPKP...
+  Fail Mode:    closed
+  Attestation:  required
+
+On-Chain Rules:
+  ALLOW_TARGETS: [0xUniswapRouter, 0xAavePool]
+  MAX_VALUE: 10 ETH
+  SPEND_LIMIT: 50,000 USDC / 24h
+  COOLDOWN: 300s
+
+Off-Chain Rules:
+  MAX_SLIPPAGE_BPS: 50 (0.5%)
+  REQUIRE_SIMULATION: true
+```
+
+---
+
+## `remove`
+
+Remove the active policy from an account.
+
+```bash
+policykit remove [options]
+```
+
+### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--chain <chain>` | Target chain | `base-sepolia` |
+| `--engine <address>` | PolicyEngine contract address | From env |
+| `--confirm` | Skip confirmation prompt | `false` |
+
+### Example
+
+```bash
+policykit remove --chain base-sepolia --confirm
+```
+
+<Warning>
+  Removing a policy immediately stops enforcement. Transactions will no longer be checked against any rules.
+</Warning>

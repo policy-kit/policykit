@@ -1,0 +1,121 @@
+---
+title: Agent Wallet
+description: AI agent wallet with strict guardrails
+---
+
+# Agent Wallet Example
+
+This example shows how to set up strict guardrails for an AI agent-controlled wallet. The policy ensures the agent can only perform specific, bounded actions.
+
+## Scenario
+
+You have an AI agent that:
+- Manages a portfolio by executing trades
+- Needs tight spending controls
+- Should not be able to drain the wallet
+- Must wait between actions to prevent rapid-fire trading
+
+## Policy Definition
+
+```typescript
+import { PolicyBuilder } from "@policykit/sdk";
+import { parseEther, parseUnits } from "viem";
+
+const UNISWAP_ROUTER = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
+const ONEINCH_ROUTER = "0x1111111254EEB25477B68fb85Ed929f73A960582";
+const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const USDT = "0xdAC17F958D2ee523a2206206994597C13D831ec7";
+const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+
+const policy = new PolicyBuilder("ai-agent-guardrails")
+  // Strict target allowlist — only approved DEXes and tokens
+  .allowTargets([UNISWAP_ROUTER, ONEINCH_ROUTER, USDC, USDT, WETH])
+
+  // Only allow swap functions — no approvals, no admin functions
+  .allowSelectors([
+    "0x38ed1739", // swapExactTokensForTokens
+    "0x7ff36ab5", // swapExactETHForTokens
+    "0x12aa3caf", // 1inch swap
+  ])
+
+  // Block dangerous selectors explicitly
+  .denySelectors([
+    "0x095ea7b3", // approve
+    "0x39509351", // increaseAllowance
+  ])
+
+  // Max 0.5 ETH per transaction (small trades only)
+  .maxValue(parseEther("0.5"))
+
+  // Daily spending limits
+  .spendLimit(USDC, parseUnits("5000", 6), 86400)  // 5k USDC/day
+  .spendLimit(USDT, parseUnits("5000", 6), 86400)  // 5k USDT/day
+
+  // 10 minute cooldown — prevents rapid trading
+  .cooldown(600)
+
+  // Strict slippage (0.3%)
+  .maxSlippageBps(30)
+
+  // Must simulate before executing
+  .requireSimulation(true)
+
+  // Never allow transactions if Lit is down
+  .setFailMode("closed")
+
+  .build();
+```
+
+## Key Design Decisions
+
+### Why strict target allowlisting?
+
+AI agents can be manipulated through prompt injection or adversarial inputs. A strict allowlist ensures the agent can only interact with known, trusted contracts — even if the agent's reasoning is compromised.
+
+### Why deny approvals?
+
+ERC-20 `approve` calls are one of the most dangerous operations. A malicious or confused agent could approve a drainer contract for unlimited tokens. By explicitly denying approval selectors, this attack vector is eliminated.
+
+### Why cooldowns?
+
+If an agent enters a bad loop or is manipulated into rapid trading, the cooldown prevents it from draining the wallet through many small transactions. A 10-minute cooldown limits damage.
+
+### Why closed fail mode?
+
+For an AI agent, security trumps availability. If Lit Protocol is unreachable and off-chain rules can't be checked (slippage, simulation), it's better to block the transaction than risk executing without guardrails.
+
+## Deployment
+
+```typescript
+const pk = new PolicyKit({
+  publicClient,
+  walletClient,
+  engineAddress: POLICY_ENGINE_ADDRESS,
+  ipfsBackends: [{ type: "pinata", jwt: process.env.PINATA_JWT }],
+  litConfig: {
+    network: "naga",
+    litActionCID: process.env.LIT_ACTION_CID,
+  },
+});
+
+await pk.deployPolicy(policy);
+```
+
+## Monitoring
+
+After deployment, use the CLI to inspect the active policy:
+
+```bash
+policykit inspect --account 0xAgentWallet --chain base-sepolia --full
+```
+
+You can also simulate transactions the agent might attempt:
+
+```bash
+policykit simulate \
+  --policy ./agent-policy.json \
+  --target 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45 \
+  --value 0.1 \
+  --data 0x38ed1739... \
+  --verbose
+```

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "PolicyKit",
+  "description": "Decentralized policies-as-code SDK for smart accounts and AI agents",
+  "colors": {
+    "primary": "#6366F1",
+    "light": "#818CF8",
+    "dark": "#4F46E5"
+  },
+  "favicon": "/favicon.png",
+  "navbar": {
+    "links": [
+      {
+        "label": "GitHub",
+        "href": "https://github.com/policykit/policykit"
+      }
+    ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/policykit/policykit"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "href": "/"
+      },
+      {
+        "tab": "SDK Reference",
+        "href": "/sdk"
+      },
+      {
+        "tab": "CLI",
+        "href": "/cli"
+      }
+    ],
+    "groups": [
+      {
+        "group": "Getting Started",
+        "pages": [
+          "index",
+          "getting-started/overview",
+          "getting-started/installation",
+          "getting-started/quickstart"
+        ]
+      },
+      {
+        "group": "Core Concepts",
+        "pages": [
+          "concepts/architecture",
+          "concepts/policies",
+          "concepts/three-tier-rules",
+          "concepts/evaluation-flow"
+        ]
+      },
+      {
+        "group": "SDK",
+        "pages": [
+          "sdk/overview",
+          "sdk/policy-builder",
+          "sdk/policy-kit-client",
+          "sdk/policy-simulator",
+          "sdk/ipfs-client",
+          "sdk/lit-client"
+        ]
+      },
+      {
+        "group": "CLI",
+        "pages": [
+          "cli/overview",
+          "cli/commands"
+        ]
+      },
+      {
+        "group": "Smart Contracts",
+        "pages": [
+          "contracts/overview",
+          "contracts/policy-engine",
+          "contracts/rules"
+        ]
+      },
+      {
+        "group": "Examples",
+        "pages": [
+          "examples/smart-account",
+          "examples/agent-wallet",
+          "examples/dao-guard"
+        ]
+      }
+    ]
+  }
+}

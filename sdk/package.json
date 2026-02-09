@@ -1,0 +1,59 @@
+{
+  "name": "@policykit/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for PolicyKit — decentralized policies-as-code for smart accounts and agents",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "viem": "^2.23.0",
+    "zod": "^3.24.0"
+  },
+  "peerDependencies": {
+    "@lit-protocol/lit-client": "^8.3.0",
+    "@lit-protocol/networks": "^8.4.0",
+    "@lit-protocol/auth": "^8.2.0",
+    "@lit-protocol/contracts": "^0.9.0"
+  },
+  "peerDependenciesMeta": {
+    "@lit-protocol/lit-client": {
+      "optional": true
+    },
+    "@lit-protocol/networks": {
+      "optional": true
+    },
+    "@lit-protocol/auth": {
+      "optional": true
+    },
+    "@lit-protocol/contracts": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}

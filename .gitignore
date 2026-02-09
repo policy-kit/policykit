@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+out/
+build/
+
+# Foundry
+contracts/cache/
+contracts/out/
+contracts/broadcast/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Turbo
+.turbo/
+
+# Coverage
+coverage/
+lcov.info
+
+# Logs
+*.log
+npm-debug.log*

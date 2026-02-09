@@ -1,0 +1,91 @@
+---
+title: Contracts Overview
+description: Overview of PolicyKit's smart contracts
+---
+
+# Smart Contracts Overview
+
+PolicyKit's on-chain layer consists of Solidity contracts built with [Foundry](https://book.getfoundry.sh/). These contracts store policy configurations, evaluate on-chain rules, and verify off-chain attestations.
+
+## Contract Architecture
+
+```
+┌─────────────────────────────────────────────────┐
+│              Smart Account                      │
+│  ┌──────────────┐  ┌────────────────────────┐   │
+│  │ PolicyGuard   │  │ PolicyKit7579Module    │   │
+│  │  (Guard)      │  │  (ERC-7579 Validator) │   │
+│  └──────┬───────┘  └───────────┬────────────┘   │
+└─────────┼──────────────────────┼────────────────┘
+          │                      │
+          └──────────┬───────────┘
+                     │
+              ┌──────▼──────┐
+              │ PolicyEngine │
+              │  (Core)      │
+              └──────┬──────┘
+                     │
+      ┌──────────────┼──────────────┐
+      │              │              │
+┌─────▼─────┐ ┌─────▼─────┐ ┌─────▼──────────┐
+│ Tier 1     │ │ Tier 2     │ │ Attestation    │
+│ Evaluators │ │ Evaluators │ │ Verifier       │
+└────────────┘ └────────────┘ └────────────────┘
+```
+
+## Core Contracts
+
+| Contract | Description |
+|----------|-------------|
+| `PolicyEngine` | Central registry and evaluation dispatcher |
+| `PolicyGuard` | Guard hook for smart accounts |
+| `PolicyKit7579Module` | ERC-7579 validation module |
+| `AttestationVerifier` | EIP-712 attestation verification |
+
+## Rule Evaluators
+
+| Contract | Tier | Description |
+|----------|------|-------------|
+| `AllowTargetsRule` | 1 | Whitelist contract addresses |
+| `DenyTargetsRule` | 1 | Blacklist contract addresses |
+| `AllowSelectorsRule` | 1 | Whitelist function selectors |
+| `DenySelectorsRule` | 1 | Blacklist function selectors |
+| `MaxValueRule` | 1 | Cap ETH value per transaction |
+| `SpendLimitRule` | 2 | Token spending limits with time windows |
+| `CooldownRule` | 2 | Minimum time between transactions |
+
+## Libraries
+
+| Library | Description |
+|---------|-------------|
+| `PolicyCodec` | Encode/decode policy rules for on-chain storage |
+| `CalldataParser` | Parse transaction calldata (target, selector, params) |
+
+## Deployment
+
+Contracts are deployed using Foundry's deployment scripts:
+
+```bash
+cd contracts
+forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast
+```
+
+## Development
+
+### Build
+
+```bash
+forge build
+```
+
+### Test
+
+```bash
+forge test
+```
+
+### Gas Report
+
+```bash
+forge test --gas-report
+```

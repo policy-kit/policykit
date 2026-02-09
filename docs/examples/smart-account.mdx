@@ -1,0 +1,125 @@
+---
+title: Smart Account
+description: ERC-7579 smart account with comprehensive policy enforcement
+---
+
+# Smart Account Example
+
+This example demonstrates how to set up a comprehensive policy for an ERC-7579 compatible smart account that interacts with DeFi protocols.
+
+## Scenario
+
+You have a smart account that:
+- Trades on Uniswap and lends on Aave
+- Should only interact with trusted protocols
+- Needs spending limits and slippage protection
+- Must simulate transactions before executing
+
+## Policy Definition
+
+```typescript
+import { PolicyBuilder } from "@policykit/sdk";
+import { parseEther, parseUnits } from "viem";
+
+const UNISWAP_ROUTER = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
+const AAVE_POOL = "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9";
+const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+
+const policy = new PolicyBuilder("defi-smart-account")
+  // Only interact with trusted DeFi protocols
+  .allowTargets([UNISWAP_ROUTER, AAVE_POOL, USDC, WETH])
+
+  // Allow specific DeFi functions
+  .allowSelectors([
+    "0x38ed1739", // swapExactTokensForTokens
+    "0x7ff36ab5", // swapExactETHForTokens
+    "0xe8e33700", // addLiquidity
+    "0x69328dec", // withdraw (Aave)
+    "0x617ba037", // deposit (Aave)
+  ])
+
+  // Max 5 ETH per transaction
+  .maxValue(parseEther("5"))
+
+  // 100k USDC spending limit per day
+  .spendLimit(USDC, parseUnits("100000", 6), 86400)
+
+  // 5 minute cooldown between transactions
+  .cooldown(300)
+
+  // Max 0.5% slippage on swaps
+  .maxSlippageBps(50)
+
+  // Must simulate successfully
+  .requireSimulation(true)
+
+  // Block transactions if Lit Protocol is down
+  .setFailMode("closed")
+
+  .build();
+```
+
+## Deployment
+
+```typescript
+import { PolicyKit } from "@policykit/sdk";
+import { createPublicClient, createWalletClient, http } from "viem";
+import { baseSepolia } from "viem/chains";
+
+const pk = new PolicyKit({
+  publicClient: createPublicClient({
+    chain: baseSepolia,
+    transport: http(process.env.RPC_URL),
+  }),
+  walletClient: createWalletClient({
+    chain: baseSepolia,
+    transport: http(process.env.RPC_URL),
+    account: smartAccountAddress,
+  }),
+  engineAddress: "0xPolicyEngineAddress",
+  ipfsBackends: [{ type: "pinata", jwt: process.env.PINATA_JWT }],
+  litConfig: {
+    network: "naga",
+    litActionCID: process.env.LIT_ACTION_CID,
+  },
+});
+
+const result = await pk.deployPolicy(policy);
+console.log("Deployed:", result.cid);
+```
+
+## Transaction Flow
+
+When the smart account executes a swap:
+
+1. The `PolicyKit7579Module` intercepts the transaction
+2. **Tier 1**: Checks target is Uniswap, selector is `swapExactTokensForTokens`, value is under 5 ETH
+3. **Tier 2**: Checks USDC spending is under 100k/day, and cooldown has elapsed
+4. **Tier 3**: Lit Protocol checks slippage is under 0.5% and simulates the transaction
+5. If all pass, the transaction executes
+
+## Testing
+
+```typescript
+import { PolicySimulator } from "@policykit/sdk";
+
+const simulator = new PolicySimulator();
+
+// Test: valid swap
+const validSwap = await simulator.evaluate(policy, {
+  target: UNISWAP_ROUTER,
+  value: parseEther("1"),
+  data: "0x38ed1739...", // swapExactTokensForTokens calldata
+});
+console.log(validSwap.allowed); // true
+
+// Test: blocked target
+const blockedTarget = await simulator.evaluate(policy, {
+  target: "0xUnknownContract",
+  value: 0n,
+  data: "0x...",
+});
+console.log(blockedTarget.allowed); // false
+console.log(blockedTarget.failedRules[0].rule); // "ALLOW_TARGETS"
+```

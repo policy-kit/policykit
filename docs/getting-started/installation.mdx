@@ -1,0 +1,108 @@
+---
+title: Installation
+description: Install the PolicyKit SDK and CLI
+---
+
+# Installation
+
+## Prerequisites
+
+- **Node.js** >= 18.0.0
+- **pnpm** (recommended) or npm
+
+## SDK
+
+Install the core SDK in your project:
+
+<CodeGroup>
+
+```bash pnpm
+pnpm add @policykit/sdk
+```
+
+```bash npm
+npm install @policykit/sdk
+```
+
+```bash yarn
+yarn add @policykit/sdk
+```
+
+</CodeGroup>
+
+### Peer Dependencies
+
+The SDK has peer dependencies for Lit Protocol integration. If you plan to use off-chain (Tier 3) rules, install them as well:
+
+```bash
+pnpm add @lit-protocol/lit-node-client @lit-protocol/constants @lit-protocol/auth-helpers
+```
+
+### Required Dependencies
+
+The SDK requires `viem` for Ethereum interactions:
+
+```bash
+pnpm add viem
+```
+
+## CLI
+
+Install the CLI globally:
+
+<CodeGroup>
+
+```bash pnpm
+pnpm add -g @policykit/cli
+```
+
+```bash npm
+npm install -g @policykit/cli
+```
+
+</CodeGroup>
+
+Verify the installation:
+
+```bash
+policykit --version
+```
+
+## Smart Contracts (Development)
+
+If you're developing or extending the smart contracts, you'll need [Foundry](https://book.getfoundry.sh/):
+
+```bash
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+```
+
+Then install contract dependencies:
+
+```bash
+cd contracts
+forge install
+```
+
+## Monorepo Setup (Contributing)
+
+To work on PolicyKit itself:
+
+```bash
+git clone https://github.com/policykit/policykit.git
+cd policykit
+pnpm install
+pnpm build
+```
+
+Run tests across all packages:
+
+```bash
+pnpm test
+```
+
+## Next Steps
+
+<Card title="Quickstart" icon="rocket" href="/getting-started/quickstart">
+  Build and deploy your first policy.
+</Card>

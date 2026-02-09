@@ -1,0 +1,217 @@
+---
+title: PolicyKit Client
+description: High-level client for deploying and managing policies
+---
+
+# PolicyKit Client
+
+The `PolicyKit` class is the high-level orchestrator that ties together IPFS pinning, on-chain deployment, Lit Protocol integration, and policy simulation.
+
+## Constructor
+
+```typescript
+import { PolicyKit } from "@policykit/sdk";
+
+const pk = new PolicyKit({
+  publicClient,
+  walletClient,
+  engineAddress: "0xPolicyEngineAddress",
+  ipfsBackends: [
+    { type: "pinata", jwt: process.env.PINATA_JWT },
+  ],
+  litConfig: {
+    network: "naga",
+    litActionCID: "QmLitActionCID",
+  },
+});
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `publicClient` | `PublicClient` | Yes | viem public client for reading chain state |
+| `walletClient` | `WalletClient` | Yes | viem wallet client for sending transactions |
+| `engineAddress` | `Address` | Yes | Deployed `PolicyEngine` contract address |
+| `ipfsBackends` | `IPFSBackend[]` | Yes | Array of IPFS backend configurations |
+| `litConfig` | `LitConfig` | No | Lit Protocol configuration (required for Tier 3 rules) |
+
+### IPFSBackend
+
+```typescript
+interface IPFSBackend {
+  type: "pinata" | "custom";
+  jwt?: string;           // For Pinata
+  endpoint?: string;      // For custom backends
+  headers?: Record<string, string>;
+}
+```
+
+### LitConfig
+
+```typescript
+interface LitConfig {
+  network: "naga";          // Lit Protocol network
+  litActionCID: string;      // CID of the deployed Lit Action
+  pkpPublicKey?: string;     // PKP public key (if pre-provisioned)
+}
+```
+
+## Methods
+
+### `deployPolicy(policy)`
+
+Deploy a policy to IPFS and register it on-chain.
+
+```typescript
+const result = await pk.deployPolicy(policy);
+
+console.log(result.cid);     // IPFS CID of the policy
+console.log(result.txHash);  // On-chain registration tx hash
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policy` | `Policy` | The policy to deploy |
+
+**Returns:** `Promise<DeployResult>`
+
+```typescript
+interface DeployResult {
+  cid: string;         // IPFS content identifier
+  txHash: Hex;         // Transaction hash
+  blockNumber: bigint; // Block number of registration
+}
+```
+
+### `updatePolicy(policy)`
+
+Update an existing policy. Pins the new version to IPFS and updates the on-chain reference.
+
+```typescript
+const result = await pk.updatePolicy(updatedPolicy);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policy` | `Policy` | The updated policy |
+
+**Returns:** `Promise<DeployResult>`
+
+### `removePolicy()`
+
+Remove the active policy from the caller's account.
+
+```typescript
+const txHash = await pk.removePolicy();
+```
+
+**Returns:** `Promise<Hex>` — The transaction hash
+
+### `getPolicy(account)`
+
+Retrieve the active policy for an account.
+
+```typescript
+const policyData = await pk.getPolicy("0xAccountAddress");
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `account` | `Address` | The smart account address |
+
+**Returns:** `Promise<PolicyData | null>`
+
+```typescript
+interface PolicyData {
+  cid: string;
+  pkpAddress: Address;
+  failMode: FailMode;
+  encodedRules: Hex;
+  requiresAttestation: boolean;
+}
+```
+
+### `simulate(policy, txParams)`
+
+Simulate a transaction against a policy locally.
+
+```typescript
+const report = await pk.simulate(policy, {
+  target: "0xUniswapRouter",
+  value: parseEther("1"),
+  data: "0x38ed1739...",
+});
+
+if (report.allowed) {
+  console.log("Transaction would be allowed");
+} else {
+  console.log("Blocked by:", report.failedRules);
+}
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policy` | `Policy` | The policy to evaluate against |
+| `txParams` | `TxParams` | Transaction parameters |
+
+**Returns:** `Promise<EvaluationReport>`
+
+### `requestAttestation(policy, txParams)`
+
+Request a Lit Protocol attestation for a transaction.
+
+```typescript
+const attestation = await pk.requestAttestation(policy, {
+  target: "0xUniswapRouter",
+  value: parseEther("1"),
+  data: "0x38ed1739...",
+});
+
+console.log(attestation.signature); // EIP-712 signature
+console.log(attestation.deadline);  // Expiration timestamp
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policy` | `Policy` | The policy with off-chain rules |
+| `txParams` | `TxParams` | Transaction parameters |
+
+**Returns:** `Promise<Attestation>`
+
+```typescript
+interface Attestation {
+  signature: Hex;
+  deadline: number;
+  nonce: bigint;
+}
+```
+
+## Types
+
+### TxParams
+
+```typescript
+interface TxParams {
+  target: Address;    // Destination address
+  value: bigint;      // ETH value in wei
+  data: Hex;          // Calldata
+}
+```
+
+### EvaluationReport
+
+```typescript
+interface EvaluationReport {
+  allowed: boolean;
+  results: RuleResult[];
+  failedRules: RuleResult[];
+}
+
+interface RuleResult {
+  rule: RuleType;
+  tier: 1 | 2 | 3;
+  passed: boolean;
+  reason?: string;
+}
+```

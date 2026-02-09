@@ -1,0 +1,213 @@
+---
+title: Rule Evaluators
+description: Individual smart contracts for each rule type
+---
+
+# Rule Evaluators
+
+Each on-chain rule type is implemented as a separate evaluator contract. The `PolicyEngine` dispatches to these contracts during evaluation.
+
+## Tier 1: Stateless Rules
+
+### AllowTargetsRule
+
+Checks if the transaction target is in a whitelist of allowed addresses.
+
+```solidity
+contract AllowTargetsRule {
+    function evaluate(
+        address target,
+        bytes calldata ruleData
+    ) external pure returns (bool);
+}
+```
+
+**Rule Data Format:**
+```
+[addressCount: uint8][addr1: address][addr2: address]...
+```
+
+**Gas Cost:** ~2,500 + 200 per address in the list
+
+### DenyTargetsRule
+
+Checks if the transaction target is NOT in a blacklist of denied addresses.
+
+```solidity
+contract DenyTargetsRule {
+    function evaluate(
+        address target,
+        bytes calldata ruleData
+    ) external pure returns (bool);
+}
+```
+
+**Rule Data Format:** Same as `AllowTargetsRule`
+
+### AllowSelectorsRule
+
+Checks if the function selector (first 4 bytes of calldata) is in a whitelist.
+
+```solidity
+contract AllowSelectorsRule {
+    function evaluate(
+        bytes calldata data,
+        bytes calldata ruleData
+    ) external pure returns (bool);
+}
+```
+
+**Rule Data Format:**
+```
+[selectorCount: uint8][selector1: bytes4][selector2: bytes4]...
+```
+
+### DenySelectorsRule
+
+Checks if the function selector is NOT in a blacklist.
+
+```solidity
+contract DenySelectorsRule {
+    function evaluate(
+        bytes calldata data,
+        bytes calldata ruleData
+    ) external pure returns (bool);
+}
+```
+
+### MaxValueRule
+
+Checks if the ETH value is within the allowed maximum.
+
+```solidity
+contract MaxValueRule {
+    function evaluate(
+        uint256 value,
+        bytes calldata ruleData
+    ) external pure returns (bool);
+}
+```
+
+**Rule Data Format:**
+```
+[maxValue: uint256]
+```
+
+**Gas Cost:** ~800
+
+## Tier 2: Stateful Rules
+
+### SpendLimitRule
+
+Tracks cumulative token spending within a rolling time window.
+
+```solidity
+contract SpendLimitRule {
+    // Track spending per account per token
+    mapping(address => mapping(address => SpendWindow)) public windows;
+
+    struct SpendWindow {
+        uint256 spent;        // Amount spent in current window
+        uint256 windowStart;  // Start timestamp of current window
+    }
+
+    function evaluate(
+        address account,
+        address target,
+        bytes calldata data,
+        bytes calldata ruleData
+    ) external returns (bool);
+}
+```
+
+**Rule Data Format:**
+```
+[token: address][limit: uint256][windowSeconds: uint256]
+```
+
+**Behavior:**
+1. Decode the ERC-20 `transfer` or `transferFrom` amount from calldata
+2. Check if the current window has expired; if so, reset
+3. Add the transfer amount to cumulative spending
+4. Return `true` if cumulative spend is within the limit
+
+**Gas Cost:** ~25,000 (SLOAD + SSTORE)
+
+### CooldownRule
+
+Enforces a minimum time between transactions.
+
+```solidity
+contract CooldownRule {
+    // Track last transaction timestamp per account
+    mapping(address => uint256) public lastTxTimestamp;
+
+    function evaluate(
+        address account,
+        bytes calldata ruleData
+    ) external returns (bool);
+}
+```
+
+**Rule Data Format:**
+```
+[cooldownSeconds: uint256]
+```
+
+**Behavior:**
+1. Check if `block.timestamp - lastTxTimestamp >= cooldownSeconds`
+2. Update `lastTxTimestamp` to `block.timestamp`
+3. Return `true` if enough time has passed
+
+**Gas Cost:** ~22,000 (SLOAD + SSTORE)
+
+## AttestationVerifier
+
+Verifies EIP-712 signed attestations from Lit Protocol PKPs.
+
+```solidity
+contract AttestationVerifier {
+    function verify(
+        address account,
+        address target,
+        uint256 value,
+        bytes calldata data,
+        bytes32 policyCID,
+        address pkpAddress,
+        bytes calldata attestation
+    ) external view returns (bool);
+}
+```
+
+**Verification steps:**
+
+1. Decode the attestation as `(uint256 deadline, uint256 nonce, bytes signature)`
+2. Check that `block.timestamp <= deadline` (not expired)
+3. Reconstruct the EIP-712 typed data hash
+4. Recover the signer from the signature
+5. Check that the signer matches `pkpAddress`
+6. Return `true` if all checks pass
+
+**Gas Cost:** ~30,000 (ecrecover + hash computations)
+
+## Adding Custom On-Chain Rules
+
+To create a custom Tier 1 or Tier 2 rule evaluator:
+
+1. Implement the evaluator interface:
+
+```solidity
+interface IRuleEvaluator {
+    function evaluate(
+        address account,
+        address target,
+        uint256 value,
+        bytes calldata data,
+        bytes calldata ruleData
+    ) external returns (bool);
+}
+```
+
+2. Deploy the evaluator contract
+3. Register it with the `PolicyEngine` (requires governance/admin)
+4. Use the custom rule type in your policy

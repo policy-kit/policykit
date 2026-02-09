@@ -1,0 +1,59 @@
+---
+title: CLI Overview
+description: Command-line tool for policy management
+---
+
+# CLI Overview
+
+The `@policykit/cli` package provides a command-line interface for common policy operations — initializing, deploying, simulating, inspecting, and removing policies.
+
+## Installation
+
+<CodeGroup>
+
+```bash pnpm
+pnpm add -g @policykit/cli
+```
+
+```bash npm
+npm install -g @policykit/cli
+```
+
+</CodeGroup>
+
+## Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `policykit init` | Initialize a new policy from a template |
+| `policykit deploy` | Deploy a policy (IPFS + on-chain) |
+| `policykit simulate` | Simulate a transaction against a policy |
+| `policykit inspect` | Inspect an on-chain policy |
+| `policykit remove` | Remove a policy from the PolicyEngine |
+
+## Global Options
+
+| Flag | Description |
+|------|-------------|
+| `--chain <chain>` | Target chain (`base`, `base-sepolia`) |
+| `--rpc <url>` | Custom RPC endpoint |
+| `--private-key <key>` | Private key for signing transactions |
+| `--verbose` | Enable verbose output |
+| `--help` | Show help for a command |
+| `--version` | Show CLI version |
+
+## Environment Variables
+
+The CLI reads configuration from environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `POLICYKIT_PRIVATE_KEY` | Default private key |
+| `POLICYKIT_RPC_URL` | Default RPC endpoint |
+| `POLICYKIT_CHAIN` | Default chain |
+| `PINATA_JWT` | Pinata JWT for IPFS operations |
+| `POLICYKIT_ENGINE_ADDRESS` | Default PolicyEngine address |
+
+<Tip>
+  Use a `.env` file in your project root. The CLI automatically loads it.
+</Tip>

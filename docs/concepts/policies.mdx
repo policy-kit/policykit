@@ -1,0 +1,148 @@
+---
+title: Policies
+description: Understanding PolicyKit policies and their structure
+---
+
+# Policies
+
+A **policy** is the fundamental unit in PolicyKit. It defines a set of rules that govern which transactions a smart account is allowed to execute.
+
+## Policy Structure
+
+Every policy contains:
+
+```typescript
+interface Policy {
+  version: string;        // Schema version (e.g., "1.0")
+  id: string;             // Unique policy identifier
+  createdAt: number;      // Unix timestamp
+  failMode: FailMode;     // "closed" or "open"
+  rules: {
+    onChain: OnChainRule[];   // Tier 1 and Tier 2 rules
+    offChain: OffChainRule[]; // Tier 3 rules
+  };
+}
+```
+
+### Metadata Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `version` | `string` | Policy schema version for forward compatibility |
+| `id` | `string` | Human-readable identifier |
+| `createdAt` | `number` | Unix timestamp of policy creation |
+
+### Fail Mode
+
+The fail mode determines behavior when off-chain evaluation is unavailable:
+
+| Mode | Behavior | Use Case |
+|------|----------|----------|
+| `closed` | Block transaction if Lit is unreachable | High-security (treasury, large amounts) |
+| `open` | Allow with on-chain checks only | High-availability (frequent, low-value txs) |
+
+<Warning>
+  The `open` fail mode means off-chain rules are bypassed when Lit Protocol is unavailable. Only use this when availability is more important than the security provided by Tier 3 rules.
+</Warning>
+
+## Rules
+
+Rules are the building blocks of policies. Each rule defines a single constraint that transactions must satisfy.
+
+### On-Chain Rules
+
+On-chain rules are evaluated directly by the EVM, making them fully trustless:
+
+**Tier 1 — Stateless** (no storage required):
+
+| Rule | Description |
+|------|-------------|
+| `ALLOW_TARGETS` | Whitelist of allowed contract addresses |
+| `DENY_TARGETS` | Blacklist of denied contract addresses |
+| `ALLOW_SELECTORS` | Whitelist of allowed function selectors |
+| `DENY_SELECTORS` | Blacklist of denied function selectors |
+| `MAX_VALUE` | Maximum ETH value per transaction |
+
+**Tier 2 — Stateful** (uses on-chain storage):
+
+| Rule | Description |
+|------|-------------|
+| `SPEND_LIMIT` | Token spending limit within a rolling time window |
+| `COOLDOWN` | Minimum time between transactions |
+
+### Off-Chain Rules
+
+Off-chain rules are evaluated by Lit Protocol and can access external data:
+
+**Tier 3 — Off-Chain**:
+
+| Rule | Description |
+|------|-------------|
+| `MAX_SLIPPAGE_BPS` | Maximum acceptable slippage in basis points |
+| `REQUIRE_SIMULATION` | Transaction must succeed in simulation |
+| `CUSTOM` | User-defined rule with IPFS-hosted logic |
+
+## Policy Lifecycle
+
+### 1. Build
+
+Create a policy using `PolicyBuilder`:
+
+```typescript
+const policy = new PolicyBuilder("treasury-policy")
+  .allowTargets(["0x..."])
+  .maxValue(parseEther("5"))
+  .setFailMode("closed")
+  .build();
+```
+
+### 2. Validate
+
+PolicyKit validates policies using Zod schemas. The `build()` method automatically validates:
+
+- At least one rule is defined
+- Rule parameters are within valid ranges
+- No conflicting rules (e.g., allow and deny for the same target)
+
+### 3. Deploy
+
+Deploying a policy involves two steps:
+
+1. **IPFS**: The full policy JSON is pinned to IPFS
+2. **On-chain**: The policy CID, encoded rules, and configuration are registered on the `PolicyEngine`
+
+### 4. Evaluate
+
+When a transaction is submitted, the policy is evaluated:
+
+1. On-chain rules are checked first (fast, cheap)
+2. Off-chain rules are checked via Lit Protocol (if any)
+3. Transaction is allowed only if all rules pass
+
+### 5. Update
+
+Policies can be updated by deploying a new version. The old policy CID is replaced with the new one on-chain.
+
+### 6. Remove
+
+Policies can be removed from the `PolicyEngine`, which stops enforcement immediately.
+
+## Policy Storage
+
+Policies are stored in two locations:
+
+### IPFS (Full Policy)
+
+The complete policy JSON is pinned to IPFS. This includes all metadata, rule definitions, and configuration. The content-addressed nature of IPFS ensures policy integrity — the CID changes if any part of the policy changes.
+
+### On-Chain (Policy Reference + Rules)
+
+The `PolicyEngine` stores:
+
+- **Policy CID** (`bytes32`) — Reference to the full policy on IPFS
+- **PKP Address** — The Lit Protocol PKP authorized to sign attestations
+- **Encoded Rules** — On-chain rules in a compact binary format
+- **Fail Mode** — Whether to block or allow when Lit is unavailable
+- **Attestation Requirements** — Whether off-chain attestation is required
+
+This dual-storage approach keeps on-chain costs minimal while maintaining the full policy off-chain for Lit Protocol evaluation.

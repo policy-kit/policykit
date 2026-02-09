@@ -1,0 +1,21 @@
+{
+  "name": "policykit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Decentralized policies-as-code SDK for smart accounts and agents",
+  "license": "MIT",
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

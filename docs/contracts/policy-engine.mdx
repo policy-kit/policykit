@@ -1,0 +1,137 @@
+---
+title: PolicyEngine
+description: Core contract for policy storage and evaluation
+---
+
+# PolicyEngine
+
+The `PolicyEngine` is the central contract that stores policy configurations and coordinates rule evaluation. It serves as the registry for all account policies and the dispatcher for rule evaluation.
+
+## Overview
+
+```solidity
+contract PolicyEngine {
+    // Policy set storage per account
+    mapping(address => PolicySet) public policySets;
+
+    // Register or update a policy set
+    function setPolicySet(
+        bytes32 policyCID,
+        address pkpAddress,
+        bytes calldata encodedRules,
+        uint8 failMode,
+        bool requiresAttestation
+    ) external;
+
+    // Remove a policy set
+    function removePolicySet() external;
+
+    // Evaluate a transaction against the caller's policy
+    function evaluate(
+        address target,
+        uint256 value,
+        bytes calldata data,
+        bytes calldata attestation
+    ) external returns (bool);
+}
+```
+
+## Policy Set Structure
+
+```solidity
+struct PolicySet {
+    bytes32 policyCID;          // IPFS CID of the full policy
+    address pkpAddress;         // PKP address for attestation verification
+    bytes encodedRules;         // Compact binary-encoded on-chain rules
+    FailMode failMode;          // CLOSED or OPEN
+    bool requiresAttestation;   // Whether Tier 3 attestation is required
+    bool active;                // Whether the policy is active
+}
+```
+
+## Functions
+
+### `setPolicySet`
+
+Register or update the caller's policy set.
+
+```solidity
+function setPolicySet(
+    bytes32 policyCID,
+    address pkpAddress,
+    bytes calldata encodedRules,
+    uint8 failMode,
+    bool requiresAttestation
+) external;
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyCID` | `bytes32` | IPFS CID (truncated to 32 bytes) |
+| `pkpAddress` | `address` | Lit Protocol PKP address |
+| `encodedRules` | `bytes` | Binary-encoded on-chain rules |
+| `failMode` | `uint8` | 0 = CLOSED, 1 = OPEN |
+| `requiresAttestation` | `bool` | Whether off-chain attestation is needed |
+
+### `removePolicySet`
+
+Remove the caller's policy set and stop enforcement.
+
+```solidity
+function removePolicySet() external;
+```
+
+### `evaluate`
+
+Evaluate a transaction against the caller's registered policy. Called by `PolicyGuard` or `PolicyKit7579Module`.
+
+```solidity
+function evaluate(
+    address target,
+    uint256 value,
+    bytes calldata data,
+    bytes calldata attestation
+) external returns (bool allowed);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `target` | `address` | Transaction destination |
+| `value` | `uint256` | ETH value in wei |
+| `data` | `bytes` | Transaction calldata |
+| `attestation` | `bytes` | EIP-712 signed attestation (empty if no Tier 3) |
+
+**Returns:** `bool` — Whether the transaction is allowed.
+
+### `getPolicySet`
+
+Read the policy set for an account.
+
+```solidity
+function getPolicySet(address account) external view returns (PolicySet memory);
+```
+
+## Events
+
+```solidity
+event PolicySetUpdated(address indexed account, bytes32 policyCID);
+event PolicySetRemoved(address indexed account);
+event TransactionEvaluated(
+    address indexed account,
+    address indexed target,
+    bool allowed
+);
+```
+
+## Encoding Format
+
+On-chain rules are encoded using the `PolicyCodec` library into a compact binary format:
+
+```
+[ruleCount: uint8]
+[rule1Type: uint8][rule1DataLength: uint16][rule1Data: bytes]
+[rule2Type: uint8][rule2DataLength: uint16][rule2Data: bytes]
+...
+```
+
+The SDK's `PolicyEncoder` handles encoding and decoding automatically.

@@ -1,0 +1,139 @@
+---
+title: IPFS Client
+description: Pin and retrieve policy documents from IPFS
+---
+
+# IPFS Client
+
+The `IPFSClient` handles pinning policy JSON to IPFS and retrieving it. It supports multiple backends for redundancy.
+
+## Usage
+
+```typescript
+import { IPFSClient } from "@policykit/sdk";
+
+const ipfs = new IPFSClient({
+  backends: [
+    {
+      type: "pinata",
+      jwt: process.env.PINATA_JWT,
+    },
+  ],
+});
+
+// Pin a policy
+const cid = await ipfs.pin(policy);
+console.log(cid); // "QmXyz..."
+
+// Retrieve a policy
+const retrieved = await ipfs.get(cid);
+console.log(retrieved); // Policy object
+```
+
+## Constructor
+
+```typescript
+new IPFSClient(options: IPFSClientOptions)
+```
+
+### Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `backends` | `IPFSBackend[]` | Yes | Array of IPFS backend configurations |
+| `timeout` | `number` | No | Request timeout in milliseconds (default: 30000) |
+
+### IPFSBackend
+
+```typescript
+// Pinata backend
+interface PinataBackend {
+  type: "pinata";
+  jwt: string;          // Pinata JWT token
+  gateway?: string;     // Custom gateway URL
+}
+
+// Custom backend
+interface CustomBackend {
+  type: "custom";
+  endpoint: string;     // API endpoint URL
+  headers?: Record<string, string>;
+}
+```
+
+## Methods
+
+### `pin(policy)`
+
+Pin a policy document to IPFS. The policy is serialized to JSON and pinned to all configured backends.
+
+```typescript
+const cid = await ipfs.pin(policy);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policy` | `Policy` | The policy object to pin |
+
+**Returns:** `Promise<string>` — The IPFS CID
+
+The client pins to all backends in parallel for redundancy. The CID is deterministic — the same policy always produces the same CID.
+
+### `get(cid)`
+
+Retrieve and parse a policy from IPFS.
+
+```typescript
+const policy = await ipfs.get("QmXyz...");
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `cid` | `string` | The IPFS content identifier |
+
+**Returns:** `Promise<Policy>`
+
+The client tries each backend in order until one succeeds. The retrieved JSON is validated against the Policy schema.
+
+### `unpin(cid)`
+
+Unpin a policy from all backends.
+
+```typescript
+await ipfs.unpin("QmXyz...");
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `cid` | `string` | The IPFS CID to unpin |
+
+**Returns:** `Promise<void>`
+
+<Warning>
+  Unpinning removes the policy from your IPFS backends. If no other node has pinned the content, it may eventually be garbage collected from the IPFS network.
+</Warning>
+
+### `cidFromPolicy(policy)`
+
+Calculate the CID for a policy without pinning it. Useful for checking if a policy is already pinned.
+
+```typescript
+const cid = await ipfs.cidFromPolicy(policy);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policy` | `Policy` | The policy object |
+
+**Returns:** `Promise<string>` — The IPFS CID
+
+## Error Handling
+
+The client throws specific errors:
+
+| Error | Description |
+|-------|-------------|
+| `IPFSPinError` | Failed to pin to any backend |
+| `IPFSRetrieveError` | Failed to retrieve from any backend |
+| `IPFSValidationError` | Retrieved JSON doesn't match Policy schema |
+| `IPFSTimeoutError` | Request exceeded timeout |

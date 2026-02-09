@@ -1,0 +1,244 @@
+---
+title: PolicyBuilder
+description: Fluent API for constructing policies
+---
+
+# PolicyBuilder
+
+The `PolicyBuilder` provides a fluent (chainable) API for constructing policies. It validates your configuration at build time and produces a well-formed `Policy` object.
+
+## Basic Usage
+
+```typescript
+import { PolicyBuilder } from "@policykit/sdk";
+import { parseEther } from "viem";
+
+const policy = new PolicyBuilder("treasury-guard")
+  .allowTargets(["0xUniswapRouter", "0xAavePool"])
+  .maxValue(parseEther("5"))
+  .spendLimit("0xUSDC", parseEther("50000"), 86400)
+  .cooldown(300)
+  .maxSlippageBps(50)
+  .requireSimulation(true)
+  .setFailMode("closed")
+  .build();
+```
+
+## Constructor
+
+```typescript
+new PolicyBuilder(id: string)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `id` | `string` | A unique, human-readable identifier for the policy |
+
+## Tier 1 Methods (Stateless On-Chain)
+
+### `.allowTargets(addresses)`
+
+Whitelist contract addresses. Only transactions to these addresses will be allowed.
+
+```typescript
+builder.allowTargets([
+  "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+  "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
+]);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `addresses` | `Address[]` | Array of allowed contract addresses |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+### `.denyTargets(addresses)`
+
+Blacklist contract addresses. Transactions to these addresses will be blocked.
+
+```typescript
+builder.denyTargets(["0xKnownMalicious"]);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `addresses` | `Address[]` | Array of denied contract addresses |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+### `.allowSelectors(selectors)`
+
+Whitelist function selectors. Only calls to these functions will be allowed.
+
+```typescript
+builder.allowSelectors([
+  "0x38ed1739", // swapExactTokensForTokens
+  "0x7ff36ab5", // swapExactETHForTokens
+]);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `selectors` | `Hex[]` | Array of 4-byte function selectors |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+### `.denySelectors(selectors)`
+
+Blacklist function selectors.
+
+```typescript
+builder.denySelectors([
+  "0x095ea7b3", // approve
+]);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `selectors` | `Hex[]` | Array of 4-byte function selectors |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+### `.maxValue(wei)`
+
+Set a maximum ETH value per transaction.
+
+```typescript
+builder.maxValue(parseEther("10")); // 10 ETH
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `wei` | `bigint` | Maximum value in wei |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+## Tier 2 Methods (Stateful On-Chain)
+
+### `.spendLimit(token, amount, windowSeconds)`
+
+Set a spending limit for a specific ERC-20 token within a rolling time window.
+
+```typescript
+builder.spendLimit(
+  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC
+  parseUnits("50000", 6), // 50,000 USDC
+  86400 // 24 hours
+);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `token` | `Address` | ERC-20 token contract address |
+| `amount` | `bigint` | Maximum spend amount in token decimals |
+| `windowSeconds` | `number` | Rolling time window in seconds |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+### `.cooldown(seconds)`
+
+Enforce a minimum time between transactions.
+
+```typescript
+builder.cooldown(300); // 5 minutes
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `seconds` | `number` | Minimum seconds between transactions |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+## Tier 3 Methods (Off-Chain)
+
+### `.maxSlippageBps(bps)`
+
+Set maximum acceptable slippage for swap transactions.
+
+```typescript
+builder.maxSlippageBps(50); // 0.5%
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `bps` | `number` | Maximum slippage in basis points (1 bps = 0.01%) |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+### `.requireSimulation(enabled)`
+
+Require that the transaction succeeds when simulated.
+
+```typescript
+builder.requireSimulation(true);
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `enabled` | `boolean` | Whether simulation is required |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+### `.customRule(config)`
+
+Add a custom off-chain rule with IPFS-hosted logic.
+
+```typescript
+builder.customRule({
+  name: "check-oracle-price",
+  description: "Verify price against oracle bounds",
+  cid: "QmCustomRuleLogicCID",
+  params: {
+    oracle: "0xChainlinkPriceFeed",
+    maxDeviation: 500,
+  },
+});
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `config.name` | `string` | Human-readable rule name |
+| `config.description` | `string` | Description of what the rule checks |
+| `config.cid` | `string` | IPFS CID of the rule logic |
+| `config.params` | `Record<string, unknown>` | Parameters passed to the rule logic |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+## Configuration Methods
+
+### `.setFailMode(mode)`
+
+Set the fail mode for off-chain rule evaluation.
+
+```typescript
+builder.setFailMode("closed");
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode` | `"closed" \| "open"` | Fail mode |
+
+**Returns:** `PolicyBuilder` (for chaining)
+
+## Build
+
+### `.build()`
+
+Validate and build the policy.
+
+```typescript
+const policy: Policy = builder.build();
+```
+
+**Returns:** `Policy`
+
+**Throws:** `ValidationError` if the policy configuration is invalid.
+
+Validation checks include:
+- At least one rule is defined
+- Rule parameters are within valid ranges
+- Addresses are valid checksummed hex
+- Selectors are exactly 4 bytes
+- Spend limit amounts are positive
+- Cooldown and window values are positive integers

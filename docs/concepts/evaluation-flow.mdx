@@ -1,0 +1,188 @@
+---
+title: Evaluation Flow
+description: How PolicyKit evaluates transactions against policies
+---
+
+# Evaluation Flow
+
+This page explains the end-to-end flow when a transaction is evaluated against a PolicyKit policy.
+
+## Overview
+
+When a smart account attempts to execute a transaction, PolicyKit intercepts it through a guard or module and evaluates it against the registered policy. The evaluation follows a strict order and fails fast — if any rule rejects the transaction, evaluation stops immediately.
+
+## Step-by-Step Flow
+
+### 1. Transaction Interception
+
+The transaction is intercepted by one of:
+
+- **`PolicyGuard`** — A guard contract attached to the smart account
+- **`PolicyKit7579Module`** — An ERC-7579 validation module
+
+Both extract the transaction parameters:
+
+```
+target:    The destination address
+value:     The ETH value being sent
+data:      The calldata (function selector + arguments)
+sender:    The account executing the transaction
+```
+
+### 2. Policy Lookup
+
+The `PolicyEngine` looks up the active policy set for the sender account:
+
+```solidity
+PolicySet storage ps = policySets[msg.sender];
+```
+
+If no policy is registered, the transaction is **allowed** (no enforcement).
+
+### 3. Tier 1 Evaluation (Stateless On-Chain)
+
+Stateless rules are evaluated first because they are the cheapest:
+
+```
+ALLOW_TARGETS  → Is the target in the whitelist?
+DENY_TARGETS   → Is the target NOT in the blacklist?
+ALLOW_SELECTORS → Is the function selector in the whitelist?
+DENY_SELECTORS  → Is the function selector NOT in the blacklist?
+MAX_VALUE       → Is the ETH value within the limit?
+```
+
+Each rule evaluator is a separate contract called by the `PolicyEngine`. If any rule returns `false`, the transaction is rejected.
+
+### 4. Tier 2 Evaluation (Stateful On-Chain)
+
+Stateful rules are evaluated next. These read and write on-chain state:
+
+```
+SPEND_LIMIT → Is cumulative token spend within the window limit?
+              Update the cumulative spend tracker.
+COOLDOWN    → Has enough time passed since the last transaction?
+              Update the last transaction timestamp.
+```
+
+<Note>
+  Tier 2 rules update state even during evaluation. If a later rule fails, the state changes are reverted along with the transaction.
+</Note>
+
+### 5. Attestation Check
+
+If the policy has off-chain rules (Tier 3), the `PolicyEngine` checks for a valid attestation:
+
+1. The transaction submitter must provide an **EIP-712 signed attestation** from the policy's PKP
+2. The `AttestationVerifier` contract verifies:
+   - The signature is valid
+   - The signer matches the registered PKP address
+   - The signed data matches the current transaction parameters
+   - The attestation hasn't expired
+
+If no attestation is provided and the fail mode is `closed`, the transaction is rejected. If the fail mode is `open`, Tier 3 rules are skipped.
+
+### 6. Tier 3 Evaluation (Off-Chain via Lit Protocol)
+
+Tier 3 evaluation happens **before** the transaction is submitted to the smart account. The flow is:
+
+#### 6a. Request Lit Action Execution
+
+The SDK calls the Lit Protocol network to execute the `policyEvaluator` action:
+
+```typescript
+const result = await litClient.executeAction({
+  litActionCID: "Qm...",
+  params: {
+    policyCID: "Qm...",
+    target: "0x...",
+    value: "1000000000000000000",
+    data: "0x...",
+    chainId: 84532,
+  },
+});
+```
+
+#### 6b. Lit Action Fetches Policy
+
+The Lit Action runs on the Lit network nodes and:
+
+1. Fetches the full policy JSON from IPFS using the policy CID
+2. Parses and validates the policy structure
+
+#### 6c. Evaluate Off-Chain Rules
+
+Each Tier 3 rule is evaluated:
+
+```
+MAX_SLIPPAGE_BPS    → Decode swap params, check slippage
+REQUIRE_SIMULATION  → Simulate tx via RPC, check success
+CUSTOM              → Fetch and execute custom rule logic from IPFS
+```
+
+#### 6d. Sign Attestation
+
+If all Tier 3 rules pass, the Lit network **threshold-signs** an EIP-712 `PolicyApproval`:
+
+```typescript
+const approval = {
+  account: senderAddress,
+  target: txTarget,
+  value: txValue,
+  data: txData,
+  policyCID: policyCID,
+  nonce: currentNonce,
+  deadline: blockTimestamp + 300, // 5 min expiry
+};
+```
+
+The threshold signature means no single Lit node can forge an attestation — a quorum of nodes must agree.
+
+#### 6e. Return Attestation
+
+The signed attestation is returned to the SDK, which includes it with the transaction submission.
+
+### 7. Final Decision
+
+```
+All Tier 1 rules pass?  ──No──→  ❌ REJECTED
+         │ Yes
+All Tier 2 rules pass?  ──No──→  ❌ REJECTED
+         │ Yes
+Has off-chain rules?    ──No──→  ✅ ALLOWED
+         │ Yes
+Valid attestation?      ──No──→  Fail mode closed? ──Yes──→ ❌ REJECTED
+         │ Yes                          │ No
+         ▼                              ▼
+    ✅ ALLOWED                     ✅ ALLOWED
+                               (on-chain only)
+```
+
+## Error Handling
+
+### Lit Protocol Unavailable
+
+If the Lit Protocol network is unreachable:
+
+- **Closed fail mode**: Transaction is blocked. This is the safe default for high-value operations.
+- **Open fail mode**: Transaction proceeds with only on-chain rule evaluation.
+
+### IPFS Unavailable
+
+If IPFS is unreachable during Lit Action execution:
+
+- The Lit Action fails to fetch the policy
+- No attestation is produced
+- Behavior follows the fail mode setting
+
+### Attestation Expired
+
+Attestations have a deadline (typically 5 minutes). If the attestation expires before the transaction is submitted, it is rejected. The SDK must request a new attestation.
+
+## Performance Characteristics
+
+| Phase | Latency | Cost |
+|-------|---------|------|
+| Tier 1 evaluation | ~0ms (same tx) | ~5,000-20,000 gas |
+| Tier 2 evaluation | ~0ms (same tx) | ~20,000-50,000 gas |
+| Lit Action execution | ~1-3 seconds | Off-chain (no gas) |
+| Attestation verification | ~0ms (same tx) | ~30,000-50,000 gas |

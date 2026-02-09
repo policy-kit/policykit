@@ -1,0 +1,100 @@
+---
+title: Overview
+description: Understanding PolicyKit's architecture and design principles
+---
+
+# Overview
+
+PolicyKit is a comprehensive framework for enforcing transaction policies on smart accounts and AI agents. It combines on-chain smart contracts with off-chain computation to provide a flexible, secure, and decentralized policy enforcement layer.
+
+## Design Principles
+
+### Policies as Code
+
+Policies are defined programmatically in TypeScript, not configured through a UI. This means you can:
+
+- **Version control** your policies alongside your application code
+- **Test** policies locally before deploying
+- **Review** policy changes through pull requests
+- **Compose** policies from reusable building blocks
+
+### Non-Custodial
+
+PolicyKit never takes custody of private keys or account access. Account owners register policies on-chain and can update or remove them at any time. The policy enforcement layer operates as a guard or module that validates transactions before execution.
+
+### Decentralized Evaluation
+
+Off-chain rules are evaluated by the [Lit Protocol](https://litprotocol.com/) network — a decentralized network of nodes that execute code in secure enclaves. This ensures that off-chain evaluation is:
+
+- **Censorship resistant** — no single party can block evaluation
+- **Tamper-proof** — computation happens in TEEs (Trusted Execution Environments)
+- **Verifiable** — results are signed by the Lit network and verified on-chain
+
+### Fail-Safe Design
+
+PolicyKit supports two fail modes:
+
+- **Closed** (default): If the off-chain evaluation layer is unreachable, transactions are blocked. Best for high-security use cases.
+- **Open**: If unreachable, transactions are allowed with on-chain-only checks. Useful when availability is critical.
+
+## Architecture
+
+PolicyKit consists of four main components:
+
+### 1. SDK (`@policykit/sdk`)
+
+The TypeScript SDK is the primary interface for building and managing policies. It provides:
+
+- `PolicyBuilder` — Fluent API for constructing policies
+- `PolicyKit` — High-level client for deploying and managing policies
+- `PolicyEngineClient` — Typed wrapper for smart contract interactions
+- `PolicySimulator` — Local evaluation engine for testing
+- `LitClient` — Integration with Lit Protocol v8
+- `IPFSClient` — IPFS pinning and retrieval
+
+### 2. Smart Contracts
+
+Solidity contracts deployed on-chain that enforce policy rules:
+
+- `PolicyEngine` — Core contract that stores and evaluates policies
+- `PolicyGuard` — Guard module for smart accounts
+- `PolicyKit7579Module` — ERC-7579 compatible module
+- Rule evaluators — Individual contracts for each rule type
+
+### 3. Lit Actions
+
+JavaScript/TypeScript code executed on the Lit Protocol network for off-chain rule evaluation. The Lit Action:
+
+1. Fetches the full policy from IPFS
+2. Evaluates Tier 3 (off-chain) rules
+3. If all rules pass, threshold-signs an EIP-712 `PolicyApproval`
+4. Returns the signed attestation for on-chain verification
+
+### 4. CLI (`@policykit/cli`)
+
+A command-line tool for common policy operations:
+
+- Initialize new policies from templates
+- Deploy policies (IPFS + on-chain)
+- Simulate transactions against policies
+- Inspect and manage on-chain policies
+
+## Supported Chains
+
+PolicyKit currently supports:
+
+| Chain | Status |
+|-------|--------|
+| Base | Supported |
+| Base Sepolia | Supported |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/getting-started/installation">
+    Install the SDK and CLI.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/getting-started/quickstart">
+    Build your first policy.
+  </Card>
+</CardGroup>

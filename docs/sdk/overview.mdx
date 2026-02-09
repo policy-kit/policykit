@@ -1,0 +1,99 @@
+---
+title: SDK Overview
+description: Overview of the @policykit/sdk package
+---
+
+# SDK Overview
+
+The `@policykit/sdk` package is the primary interface for building, deploying, and managing policies. It provides a collection of clients and utilities that work together.
+
+## Package Exports
+
+```typescript
+import {
+  // Builders
+  PolicyBuilder,
+
+  // High-level client
+  PolicyKit,
+
+  // Low-level clients
+  PolicyEngineClient,
+  IPFSClient,
+  LitClient,
+
+  // Testing
+  PolicySimulator,
+
+  // Encoding
+  PolicyEncoder,
+
+  // Types
+  Policy,
+  OnChainRule,
+  OffChainRule,
+  FailMode,
+  RuleType,
+  EvaluationReport,
+} from "@policykit/sdk";
+```
+
+## Components
+
+<CardGroup cols={2}>
+  <Card title="PolicyBuilder" icon="hammer" href="/sdk/policy-builder">
+    Fluent API for constructing policies with compile-time validation.
+  </Card>
+  <Card title="PolicyKit Client" icon="briefcase" href="/sdk/policy-kit-client">
+    High-level client that orchestrates deployment and management.
+  </Card>
+  <Card title="Policy Simulator" icon="flask" href="/sdk/policy-simulator">
+    Local evaluation engine for testing policies without deploying.
+  </Card>
+  <Card title="IPFS Client" icon="database" href="/sdk/ipfs-client">
+    Pin and retrieve policy documents from IPFS.
+  </Card>
+  <Card title="Lit Client" icon="bolt" href="/sdk/lit-client">
+    Integration with Lit Protocol for off-chain rule evaluation.
+  </Card>
+</CardGroup>
+
+## Quick Reference
+
+### Building a Policy
+
+```typescript
+import { PolicyBuilder } from "@policykit/sdk";
+
+const policy = new PolicyBuilder("my-policy")
+  .allowTargets(["0x..."])
+  .maxValue(parseEther("1"))
+  .setFailMode("closed")
+  .build();
+```
+
+### Deploying a Policy
+
+```typescript
+import { PolicyKit } from "@policykit/sdk";
+
+const pk = new PolicyKit({ publicClient, walletClient, engineAddress, ipfsBackends });
+const result = await pk.deployPolicy(policy);
+```
+
+### Simulating a Transaction
+
+```typescript
+import { PolicySimulator } from "@policykit/sdk";
+
+const simulator = new PolicySimulator();
+const report = await simulator.evaluate(policy, txParams);
+```
+
+## Dependencies
+
+| Dependency | Purpose |
+|-----------|---------|
+| `viem` | Ethereum client, ABI encoding, type utilities |
+| `zod` | Runtime schema validation for policies |
+| `@lit-protocol/*` | Lit Protocol integration (peer dependency) |

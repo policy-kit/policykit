@@ -1,0 +1,74 @@
+---
+title: Introduction
+description: Decentralized policies-as-code SDK for smart accounts and AI agents
+---
+
+# PolicyKit
+
+PolicyKit is a decentralized **policies-as-code** SDK that enables composable, enforceable policies for smart account transactions. It supports both on-chain and off-chain evaluation, giving developers a powerful framework to define and enforce transaction rules.
+
+## Why PolicyKit?
+
+Smart accounts and AI agents need guardrails. Whether you're building a DeFi application, a DAO treasury, or an AI-powered wallet, you need a way to enforce rules on transactions before they execute.
+
+PolicyKit provides:
+
+<CardGroup cols={2}>
+  <Card title="Policies as Code" icon="code">
+    Define policies programmatically using a fluent TypeScript API. Version control, test, and deploy policies like any other code.
+  </Card>
+  <Card title="Three-Tier Evaluation" icon="layer-group">
+    On-chain stateless rules, on-chain stateful rules, and off-chain rules via Lit Protocol for maximum flexibility.
+  </Card>
+  <Card title="Non-Custodial" icon="lock">
+    Account owners maintain full control. Policies are enforced without requiring custody of private keys.
+  </Card>
+  <Card title="ERC-7579 Compatible" icon="puzzle-piece">
+    Integrates seamlessly with the smart account module standard for broad wallet compatibility.
+  </Card>
+</CardGroup>
+
+## How It Works
+
+1. **Define** policies using the `PolicyBuilder` fluent API
+2. **Store** policies on IPFS for decentralized, tamper-proof storage
+3. **Deploy** on-chain rules to the `PolicyEngine` smart contract
+4. **Evaluate** transactions against your policy — on-chain and off-chain
+5. **Enforce** rules automatically before transactions execute
+
+## Quick Example
+
+```typescript
+import { PolicyBuilder } from "@policykit/sdk";
+import { parseEther } from "viem";
+
+const policy = new PolicyBuilder("my-treasury-policy")
+  .allowTargets(["0xUniswapRouter", "0xAavePool"])
+  .maxValue(parseEther("10"))
+  .spendLimit("0xUSDC", parseEther("50000"), 86400) // 50k USDC per day
+  .cooldown(300) // 5 min between transactions
+  .maxSlippageBps(50) // 0.5% max slippage
+  .requireSimulation(true)
+  .setFailMode("closed")
+  .build();
+```
+
+## Packages
+
+| Package | Description |
+|---------|-------------|
+| `@policykit/sdk` | Core TypeScript SDK with PolicyBuilder, clients, and utilities |
+| `@policykit/cli` | Command-line tool for policy management |
+| `contracts` | Solidity smart contracts for on-chain enforcement |
+| `lit-actions` | Lit Protocol actions for off-chain evaluation |
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card title="Overview" icon="book" href="/getting-started/overview">
+    Learn about PolicyKit's architecture and concepts.
+  </Card>
+  <Card title="Quickstart" icon="rocket" href="/getting-started/quickstart">
+    Build and deploy your first policy in minutes.
+  </Card>
+</CardGroup>

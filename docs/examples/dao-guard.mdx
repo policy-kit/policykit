@@ -1,0 +1,164 @@
+---
+title: DAO Guard
+description: DAO treasury execution guard with multi-tier protection
+---
+
+# DAO Guard Example
+
+This example demonstrates how to set up a policy guard for a DAO treasury that enforces spending controls and restricts interactions to approved protocols.
+
+## Scenario
+
+You have a DAO treasury that:
+- Holds significant assets in a smart account
+- Executes proposals approved by governance
+- Needs on-chain spending limits as a safety net
+- Should only interact with pre-approved protocols
+
+## Policy Definition
+
+```typescript
+import { PolicyBuilder } from "@policykit/sdk";
+import { parseEther, parseUnits } from "viem";
+
+// Approved protocol addresses
+const UNISWAP_ROUTER = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
+const AAVE_POOL = "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9";
+const COMPOUND_COMET = "0xc3d688B66703497DAA19211EEdff47f25384cdc3";
+const LIDO = "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84";
+
+// Token addresses
+const USDC = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
+const DAI = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
+const WETH = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
+
+const policy = new PolicyBuilder("dao-treasury-guard")
+  // Approved protocol targets
+  .allowTargets([
+    UNISWAP_ROUTER,
+    AAVE_POOL,
+    COMPOUND_COMET,
+    LIDO,
+    USDC,
+    DAI,
+    WETH,
+  ])
+
+  // Max 50 ETH per transaction
+  .maxValue(parseEther("50"))
+
+  // Daily spending limits per token
+  .spendLimit(USDC, parseUnits("500000", 6), 86400)   // 500k USDC/day
+  .spendLimit(DAI, parseUnits("500000", 18), 86400)    // 500k DAI/day
+
+  // 30 minute cooldown between executions
+  .cooldown(1800)
+
+  // Max 1% slippage on any swap
+  .maxSlippageBps(100)
+
+  // Require simulation for all transactions
+  .requireSimulation(true)
+
+  // Custom rule: verify proposal was approved on-chain
+  .customRule({
+    name: "check-governance-approval",
+    description: "Verify this transaction was approved by DAO governance",
+    cid: "QmGovernanceCheckRuleCID",
+    params: {
+      governorAddress: "0xDAOGovernorContract",
+      minVotingPeriod: 172800, // 2 days
+      minQuorum: 4, // 4% quorum
+    },
+  })
+
+  // Block if Lit is unavailable — treasury security is paramount
+  .setFailMode("closed")
+
+  .build();
+```
+
+## Integration with DAO Governance
+
+The custom rule `check-governance-approval` verifies on-chain that:
+
+1. A governance proposal exists for this exact transaction
+2. The proposal passed with sufficient quorum
+3. The voting period was at least 2 days
+4. The timelock delay has elapsed
+
+This ensures that even if a privileged key is compromised, it cannot bypass governance.
+
+```typescript
+// Custom rule logic (deployed to IPFS)
+// Executed by Lit Protocol during Tier 3 evaluation
+export async function evaluate(params, txParams) {
+  const { governorAddress, minVotingPeriod, minQuorum } = params;
+
+  // Compute the proposal ID from transaction parameters
+  const proposalId = computeProposalId(txParams);
+
+  // Check proposal state on-chain
+  const state = await getProposalState(governorAddress, proposalId);
+
+  if (state !== "Queued" && state !== "Executable") {
+    return { passed: false, reason: "Proposal not in executable state" };
+  }
+
+  // Verify voting period and quorum
+  const proposal = await getProposal(governorAddress, proposalId);
+  if (proposal.votingPeriod < minVotingPeriod) {
+    return { passed: false, reason: "Voting period too short" };
+  }
+
+  return { passed: true };
+}
+```
+
+## Deployment
+
+```typescript
+const pk = new PolicyKit({
+  publicClient,
+  walletClient: treasuryWalletClient,
+  engineAddress: POLICY_ENGINE_ADDRESS,
+  ipfsBackends: [{ type: "pinata", jwt: process.env.PINATA_JWT }],
+  litConfig: {
+    network: "naga",
+    litActionCID: process.env.LIT_ACTION_CID,
+  },
+});
+
+const result = await pk.deployPolicy(policy);
+console.log("DAO treasury guard deployed:", result.cid);
+```
+
+## Security Considerations
+
+### Defense in Depth
+
+This policy provides multiple layers of protection:
+
+1. **Target allowlist** — Can only interact with approved protocols
+2. **Value limits** — Caps per-transaction ETH amount
+3. **Spending limits** — Daily caps on token outflows
+4. **Cooldown** — Prevents rapid sequential executions
+5. **Slippage protection** — Prevents sandwich attacks on swaps
+6. **Simulation** — Catches reverts before execution
+7. **Governance check** — Verifies on-chain approval
+
+### Fail Mode
+
+The treasury uses `closed` fail mode. If Lit Protocol is unavailable:
+
+- Off-chain rules (slippage, simulation, governance check) cannot be evaluated
+- Transactions are **blocked** until Lit is available again
+- This is the correct choice for a treasury — availability is less important than security
+
+### Upgrading the Policy
+
+To update the policy (e.g., adding a new approved protocol):
+
+1. Build the new policy with `PolicyBuilder`
+2. Have the DAO vote to approve the policy update
+3. Deploy the new policy using `pk.updatePolicy()`

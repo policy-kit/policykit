@@ -1,0 +1,163 @@
+---
+title: Lit Client
+description: Integration with Lit Protocol for off-chain rule evaluation
+---
+
+# Lit Client
+
+The `LitClient` integrates with Lit Protocol v8 (Naga network) to execute off-chain rule evaluations and produce signed attestations.
+
+## Usage
+
+```typescript
+import { LitClient } from "@policykit/sdk";
+
+const lit = new LitClient({
+  network: "naga",
+  litActionCID: "QmLitActionCID...",
+});
+
+// Connect to the Lit network
+await lit.connect();
+
+// Request attestation for a transaction
+const attestation = await lit.requestAttestation({
+  policyCID: "QmPolicyCID...",
+  target: "0xUniswapRouter",
+  value: parseEther("1"),
+  data: "0x38ed1739...",
+  chainId: 84532,
+});
+
+console.log(attestation.signature);
+console.log(attestation.deadline);
+
+// Disconnect when done
+await lit.disconnect();
+```
+
+## Constructor
+
+```typescript
+new LitClient(config: LitConfig)
+```
+
+### LitConfig
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `network` | `"naga"` | Yes | Lit Protocol network |
+| `litActionCID` | `string` | Yes | CID of the deployed Lit Action |
+| `pkpPublicKey` | `string` | No | PKP public key (auto-provisioned if not set) |
+| `debug` | `boolean` | No | Enable debug logging |
+
+## Methods
+
+### `connect()`
+
+Connect to the Lit Protocol network. Must be called before any other method.
+
+```typescript
+await lit.connect();
+```
+
+**Returns:** `Promise<void>`
+
+### `disconnect()`
+
+Disconnect from the Lit Protocol network. Should be called when done.
+
+```typescript
+await lit.disconnect();
+```
+
+**Returns:** `Promise<void>`
+
+### `requestAttestation(params)`
+
+Execute the Lit Action to evaluate Tier 3 rules and produce a signed attestation.
+
+```typescript
+const attestation = await lit.requestAttestation({
+  policyCID: "QmPolicyCID",
+  target: "0x...",
+  value: parseEther("1"),
+  data: "0x...",
+  chainId: 84532,
+});
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `params.policyCID` | `string` | IPFS CID of the policy |
+| `params.target` | `Address` | Transaction target address |
+| `params.value` | `bigint` | Transaction ETH value |
+| `params.data` | `Hex` | Transaction calldata |
+| `params.chainId` | `number` | Chain ID for the transaction |
+
+**Returns:** `Promise<Attestation>`
+
+```typescript
+interface Attestation {
+  signature: Hex;       // EIP-712 signature from PKP
+  deadline: number;     // Expiration unix timestamp
+  nonce: bigint;        // Attestation nonce
+  pkpAddress: Address;  // Address of the signing PKP
+}
+```
+
+The Lit Action performs the following:
+
+1. Fetches the policy from IPFS
+2. Evaluates all Tier 3 rules against the transaction
+3. If all rules pass, threshold-signs an EIP-712 `PolicyApproval`
+4. Returns the signature and metadata
+
+### `isConnected()`
+
+Check if the client is connected to the Lit network.
+
+```typescript
+const connected = lit.isConnected();
+```
+
+**Returns:** `boolean`
+
+## Attestation Format
+
+The attestation uses the EIP-712 typed data standard:
+
+```typescript
+const EIP712_TYPES = {
+  PolicyApproval: [
+    { name: "account", type: "address" },
+    { name: "target", type: "address" },
+    { name: "value", type: "uint256" },
+    { name: "data", type: "bytes" },
+    { name: "policyCID", type: "bytes32" },
+    { name: "nonce", type: "uint256" },
+    { name: "deadline", type: "uint256" },
+  ],
+};
+```
+
+## Error Handling
+
+| Error | Description |
+|-------|-------------|
+| `LitConnectionError` | Failed to connect to Lit network |
+| `LitActionError` | Lit Action execution failed |
+| `LitAttestationError` | Attestation signing failed |
+| `LitTimeoutError` | Lit Action exceeded timeout |
+
+## Lit Protocol Requirements
+
+To use Tier 3 rules, you need:
+
+1. **Lit Action deployed to IPFS** — The `policyEvaluator.action.ts` from the `lit-actions` package
+2. **PKP (Programmable Key Pair)** — Provisioned through Lit Protocol
+3. **Capacity Credits** — To pay for Lit network usage
+
+<Note>
+  The `LitClient` requires peer dependencies: `@lit-protocol/lit-node-client`, `@lit-protocol/constants`, and `@lit-protocol/auth-helpers`. Install them separately.
+</Note>

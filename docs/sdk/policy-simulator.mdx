@@ -1,0 +1,162 @@
+---
+title: Policy Simulator
+description: Local policy evaluation for testing and development
+---
+
+# Policy Simulator
+
+The `PolicySimulator` evaluates transactions against policies locally, without deploying anything on-chain or interacting with Lit Protocol. It's designed for testing and development.
+
+## Usage
+
+```typescript
+import { PolicySimulator } from "@policykit/sdk";
+import { parseEther } from "viem";
+
+const simulator = new PolicySimulator();
+
+const report = await simulator.evaluate(policy, {
+  target: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45",
+  value: parseEther("0.5"),
+  data: "0x38ed1739...",
+});
+
+console.log(report.allowed);      // true
+console.log(report.results);      // Per-rule results
+console.log(report.failedRules);  // Only failed rules
+```
+
+## Constructor
+
+```typescript
+new PolicySimulator(options?: SimulatorOptions)
+```
+
+### Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `verbose` | `boolean` | `false` | Log detailed evaluation steps |
+| `mockTimestamp` | `number` | `Date.now()` | Override current timestamp (for testing cooldowns/windows) |
+| `mockState` | `MockState` | `{}` | Pre-populate state for Tier 2 rules |
+
+### MockState
+
+```typescript
+interface MockState {
+  spendHistory?: {
+    token: Address;
+    amount: bigint;
+    timestamp: number;
+  }[];
+  lastTransactionTimestamp?: number;
+}
+```
+
+## Methods
+
+### `evaluate(policy, txParams)`
+
+Evaluate a transaction against all rules in a policy.
+
+```typescript
+const report = await simulator.evaluate(policy, {
+  target: "0x...",
+  value: parseEther("1"),
+  data: "0x...",
+});
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policy` | `Policy` | The policy to evaluate |
+| `txParams` | `TxParams` | Transaction parameters |
+
+**Returns:** `Promise<EvaluationReport>`
+
+The simulator evaluates all tiers:
+- **Tier 1**: Fully simulated (exact match with on-chain behavior)
+- **Tier 2**: Simulated with mock state
+- **Tier 3**: Best-effort simulation (slippage checks use provided data, simulation rule always passes)
+
+### `evaluateRule(rule, txParams)`
+
+Evaluate a single rule against transaction parameters.
+
+```typescript
+const result = await simulator.evaluateRule(
+  { type: "MAX_VALUE", params: { maxValue: parseEther("1") } },
+  { target: "0x...", value: parseEther("2"), data: "0x" }
+);
+
+console.log(result.passed); // false
+console.log(result.reason); // "Value 2000000000000000000 exceeds max 1000000000000000000"
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `rule` | `OnChainRule \| OffChainRule` | The rule to evaluate |
+| `txParams` | `TxParams` | Transaction parameters |
+
+**Returns:** `Promise<RuleResult>`
+
+### `reset()`
+
+Reset the simulator's internal state (spend tracking, cooldown timestamps).
+
+```typescript
+simulator.reset();
+```
+
+## Examples
+
+### Testing Spend Limits
+
+```typescript
+const simulator = new PolicySimulator({
+  mockState: {
+    spendHistory: [
+      {
+        token: "0xUSDC",
+        amount: parseUnits("40000", 6), // Already spent 40k
+        timestamp: Date.now() / 1000 - 3600, // 1 hour ago
+      },
+    ],
+  },
+});
+
+const policy = new PolicyBuilder("test")
+  .spendLimit("0xUSDC", parseUnits("50000", 6), 86400)
+  .build();
+
+// This should fail — 40k + 15k = 55k > 50k limit
+const report = await simulator.evaluate(policy, {
+  target: "0xUSDC",
+  value: 0n,
+  data: encodeTransfer("0xRecipient", parseUnits("15000", 6)),
+});
+
+console.log(report.allowed); // false
+```
+
+### Testing Cooldowns
+
+```typescript
+const simulator = new PolicySimulator({
+  mockTimestamp: 1700000000,
+  mockState: {
+    lastTransactionTimestamp: 1699999800, // 200 seconds ago
+  },
+});
+
+const policy = new PolicyBuilder("test")
+  .cooldown(300) // 5 minutes
+  .build();
+
+const report = await simulator.evaluate(policy, txParams);
+console.log(report.allowed); // false — only 200s since last tx
+```
+
+<Note>
+  The simulator is designed for development and testing. Tier 3 rules are evaluated on a best-effort basis since the full Lit Protocol environment is not available locally.
+</Note>

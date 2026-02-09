@@ -1,0 +1,5 @@
+packages:
+  - "sdk"
+  - "cli"
+  - "lit-actions"
+  - "examples/*"
