@@ -122,8 +122,8 @@ contract EchidnaPolicyEngine {
 
     /// @notice AllowTargets: calling a non-allowed target must fail
     function test_allow_targets_blocks_non_allowed(address allowed, address target) public {
-        if (allowed == target) return; // skip trivial case
         if (allowed == address(0)) allowed = address(0x1);
+        if (allowed == target) return; // skip when allowed == target (after normalization)
 
         PolicyCodec.OnChainRule[] memory rules = _makeAllowTargetsRule(allowed);
         engine.setPolicySet(bytes32(0), address(0), false, PolicyCodec.FailMode.OPEN, rules);
