@@ -35,7 +35,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm build
+        run: pnpm turbo run build --filter='!@policy-kit/contracts'
 
       - name: Publish @policy-kit/contracts
         run: pnpm publish --no-git-checks --access public
