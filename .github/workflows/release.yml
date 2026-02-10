@@ -27,7 +27,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -38,25 +38,25 @@ jobs:
         run: pnpm turbo run build --filter='!@policy-kit/contracts'
 
       - name: Publish @policy-kit/contracts
-        run: pnpm publish --no-git-checks --access public
+        run: npm publish --access public
         working-directory: contracts
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @policy-kit/sdk
-        run: pnpm publish --no-git-checks --access public
+        run: npm publish --access public
         working-directory: sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @policy-kit/cli
-        run: pnpm publish --no-git-checks --access public
+        run: npm publish --access public
         working-directory: cli
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Publish @policy-kit/lit-actions
-        run: pnpm publish --no-git-checks --access public
+        run: npm publish --access public
         working-directory: lit-actions
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
