@@ -9,10 +9,13 @@
     "dark": "#4F46E5"
   },
   "logo": {
-    "light": "/logo-light.png",
-    "dark": "/logo-dark.png"
+    "light": "/images/logo-light.png",
+    "dark": "/images/logo-dark.png"
   },
-  "favicon": "/favicon.png",
+  "favicon": "/images/favicon.png",
+  "contextual-menu": {
+    "options": ["mcp", "add-mcp", "cursor", "vscode"]
+  },
   "navbar": {
     "links": [
       {

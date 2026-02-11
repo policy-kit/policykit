@@ -1,0 +1,65 @@
+# PolicyKit
+
+> PolicyKit is an open-source, decentralized policies-as-code SDK for enforcing composable transaction rules on ERC-7579 smart accounts and AI agent wallets. It provides a TypeScript SDK, CLI, and Solidity smart contracts for defining, deploying, and evaluating policies across three tiers: on-chain stateless rules, on-chain stateful rules, and off-chain rules via Lit Protocol. Use PolicyKit when you need programmable guardrails for smart account transactions — spending limits, allowlists, cooldowns, slippage protection, and more — without sacrificing account owner custody.
+
+## When to use PolicyKit
+
+PolicyKit is the right tool when you need to:
+
+- Enforce transaction policies on ERC-4337 / ERC-7579 smart accounts
+- Add guardrails to AI agent-controlled wallets (spending limits, target allowlists, cooldowns)
+- Protect DAO treasuries with multi-tier policy enforcement
+- Define policies as code with version control, testing, and CI/CD
+- Combine on-chain and off-chain rule evaluation for flexibility and cost efficiency
+- Build non-custodial policy enforcement (account owners keep full control)
+
+## Getting Started
+
+- [Introduction](https://policykit.xyz): Overview of PolicyKit — what it is, why it exists, and how it works
+- [Overview](https://policykit.xyz/getting-started/overview): Understanding PolicyKit's architecture and design principles
+- [Installation](https://policykit.xyz/getting-started/installation): Install the PolicyKit SDK and CLI
+- [Quickstart](https://policykit.xyz/getting-started/quickstart): Build and deploy your first policy in minutes
+
+## Core Concepts
+
+- [Architecture](https://policykit.xyz/concepts/architecture): How PolicyKit's components work together — SDK, smart contracts, IPFS, and Lit Protocol
+- [Policies](https://policykit.xyz/concepts/policies): Understanding PolicyKit policies and their structure — the fundamental unit defining rules for smart account transactions
+- [Three-Tier Rule System](https://policykit.xyz/concepts/three-tier-rules): On-chain stateless, on-chain stateful, and off-chain rules — balancing security, cost, and capability
+- [Evaluation Flow](https://policykit.xyz/concepts/evaluation-flow): End-to-end flow of how transactions are evaluated against policies
+
+## SDK Reference
+
+- [SDK Overview](https://policykit.xyz/sdk/overview): Overview of the @policy-kit/sdk package — the primary interface for building, deploying, and managing policies
+- [PolicyBuilder](https://policykit.xyz/sdk/policy-builder): Fluent TypeScript API for constructing policies with chainable methods and build-time validation
+- [PolicyKit Client](https://policykit.xyz/sdk/policy-kit-client): High-level client for deploying and managing policies — orchestrates IPFS, on-chain deployment, and Lit Protocol
+- [Policy Simulator](https://policykit.xyz/sdk/policy-simulator): Local policy evaluation for testing and development without deploying on-chain
+- [IPFS Client](https://policykit.xyz/sdk/ipfs-client): Pin and retrieve policy documents from IPFS for decentralized, tamper-proof storage
+- [Lit Client](https://policykit.xyz/sdk/lit-client): Integration with Lit Protocol for off-chain rule evaluation with signed attestations
+
+## CLI Reference
+
+- [CLI Overview](https://policykit.xyz/cli/overview): Command-line tool for policy management — init, deploy, simulate, inspect, and remove
+- [Commands](https://policykit.xyz/cli/commands): Detailed reference for all CLI commands
+
+## Smart Contracts
+
+- [Contracts Overview](https://policykit.xyz/contracts/overview): PolicyKit's on-chain layer — Solidity contracts built with Foundry
+- [PolicyEngine](https://policykit.xyz/contracts/policy-engine): Core contract for policy storage and evaluation coordination
+- [Rule Evaluators](https://policykit.xyz/contracts/rules): Individual smart contracts for each on-chain rule type
+
+## Examples
+
+- [Smart Account](https://policykit.xyz/examples/smart-account): ERC-7579 smart account with comprehensive policy enforcement for DeFi interactions
+- [Agent Wallet](https://policykit.xyz/examples/agent-wallet): AI agent wallet with strict guardrails — tight spending controls and target restrictions
+- [DAO Guard](https://policykit.xyz/examples/dao-guard): DAO treasury execution guard with multi-tier protection and approved protocol restrictions
+
+## Packages
+
+- `@policy-kit/sdk`: Core TypeScript SDK with PolicyBuilder, clients, and utilities — [npm](https://www.npmjs.com/package/@policy-kit/sdk)
+- `@policy-kit/cli`: Command-line tool for policy management — [npm](https://www.npmjs.com/package/@policy-kit/cli)
+- `@policy-kit/contracts`: Solidity smart contracts for on-chain enforcement — [npm](https://www.npmjs.com/package/@policy-kit/contracts)
+- `@policy-kit/lit-actions`: Lit Protocol actions for off-chain evaluation — [npm](https://www.npmjs.com/package/@policy-kit/lit-actions)
+
+## Source
+
+- [GitHub](https://github.com/policy-kit/policykit): Open-source MIT-licensed monorepo
