@@ -44,7 +44,7 @@ export interface PKPInfo {
  *
  * const pkp = await pkpManager.mintPKP({
  *   litClient,
- *   authContext: eoaAuthContext,
+ *   account: myViemAccount,
  *   permittedActionCID: "QmYourLitActionCID...",
  * });
  *
@@ -65,45 +65,50 @@ export class PKPManager {
    * After minting, use getPKPPermissionsManager() to set permitted actions.
    *
    * @param params.litClient - The Lit client instance (from createLitClient)
-   * @param params.authContext - Auth context from AuthManager
+   * @param params.account - A viem Account used to sign the on-chain mint tx
    * @param params.permittedActionCID - IPFS CID of the Lit Action to bind
    */
   async mintPKP(params: {
     litClient: unknown;
-    authContext: unknown;
+    account: unknown;
     permittedActionCID: string;
   }): Promise<PKPInfo> {
     try {
       const client = params.litClient as {
-        mintWithEoa: (args: { authContext: unknown }) => Promise<{
-          pkp: { tokenId: string; publicKey: string; ethAddress: string };
+        mintWithEoa: (args: { account: unknown }) => Promise<{
+          hash: string;
+          data: { tokenId: string; publicKey: string; ethAddress: string };
         }>;
-        getPKPPermissionsManager: () => {
+        getPKPPermissionsManager: (args: {
+          pkpIdentifier: { tokenId: string };
+          account: unknown;
+        }) => Promise<{
           addPermittedAction: (args: {
-            pkpTokenId: string;
             ipfsId: string;
-            authMethodScopes: number[];
-          }) => Promise<void>;
-        };
+            scopes: string[];
+          }) => Promise<unknown>;
+        }>;
       };
 
       // v8: Mint PKP using the litClient directly
       const mintResult = await client.mintWithEoa({
-        authContext: params.authContext,
+        account: params.account,
       });
 
       const pkpInfo: PKPInfo = {
-        tokenId: mintResult.pkp.tokenId,
-        publicKey: mintResult.pkp.publicKey,
-        ethAddress: mintResult.pkp.ethAddress as Address,
+        tokenId: mintResult.data.tokenId,
+        publicKey: mintResult.data.publicKey,
+        ethAddress: mintResult.data.ethAddress as Address,
       };
 
       // v8: Use PKP Permissions Manager to add permitted action
-      const permissionsManager = client.getPKPPermissionsManager();
+      const permissionsManager = await client.getPKPPermissionsManager({
+        pkpIdentifier: { tokenId: pkpInfo.tokenId },
+        account: params.account,
+      });
       await permissionsManager.addPermittedAction({
-        pkpTokenId: pkpInfo.tokenId,
         ipfsId: params.permittedActionCID,
-        authMethodScopes: [1], // SignAnything scope
+        scopes: ["sign-anything"],
       });
 
       return pkpInfo;
@@ -165,40 +170,43 @@ export class PKPManager {
    */
   async updatePermittedAction(params: {
     litClient: unknown;
+    account: unknown;
     pkpTokenId: string;
     oldActionCID: string;
     newActionCID: string;
   }): Promise<void> {
     try {
       const client = params.litClient as {
-        getPKPPermissionsManager: () => {
+        getPKPPermissionsManager: (args: {
+          pkpIdentifier: { tokenId: string };
+          account: unknown;
+        }) => Promise<{
           addPermittedAction: (args: {
-            pkpTokenId: string;
             ipfsId: string;
-            authMethodScopes: number[];
-          }) => Promise<void>;
-          revokePermittedAction?: (args: {
-            pkpTokenId: string;
+            scopes: string[];
+          }) => Promise<unknown>;
+          removePermittedAction?: (args: {
             ipfsId: string;
-          }) => Promise<void>;
-        };
+          }) => Promise<unknown>;
+        }>;
       };
 
-      const permissionsManager = client.getPKPPermissionsManager();
+      const permissionsManager = await client.getPKPPermissionsManager({
+        pkpIdentifier: { tokenId: params.pkpTokenId },
+        account: params.account,
+      });
 
       // Remove old permitted action
-      if (permissionsManager.revokePermittedAction) {
-        await permissionsManager.revokePermittedAction({
-          pkpTokenId: params.pkpTokenId,
+      if (permissionsManager.removePermittedAction) {
+        await permissionsManager.removePermittedAction({
           ipfsId: params.oldActionCID,
         });
       }
 
       // Add new permitted action
       await permissionsManager.addPermittedAction({
-        pkpTokenId: params.pkpTokenId,
         ipfsId: params.newActionCID,
-        authMethodScopes: [1], // SignAnything scope
+        scopes: ["sign-anything"],
       });
     } catch (error) {
       throw new Error(`Failed to update permitted action: ${error}`);

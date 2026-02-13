@@ -194,10 +194,14 @@ export class LitClient {
   /**
    * Encrypt data using Lit Protocol's decentralized encryption.
    * The data can only be decrypted by parties satisfying the access control conditions.
+   *
+   * v8: Uses litClient.encrypt() with unifiedAccessControlConditions.
+   * Encryption does NOT require authContext.
    */
   async encrypt(params: {
-    accessControlConditions: AccessControlCondition[];
+    unifiedAccessControlConditions: AccessControlCondition[];
     dataToEncrypt: string;
+    chain?: string;
   }): Promise<{ ciphertext: string; dataToEncryptHash: string }> {
     if (!this.connected || !this.litClient) {
       throw new Error("LitClient not connected. Call connect() first.");
@@ -205,26 +209,36 @@ export class LitClient {
 
     const client = this.litClient as {
       encrypt: (args: {
-        accessControlConditions: AccessControlCondition[];
+        unifiedAccessControlConditions: AccessControlCondition[];
         dataToEncrypt: string;
+        chain: string;
       }) => Promise<{ ciphertext: string; dataToEncryptHash: string }>;
     };
 
     return client.encrypt({
-      accessControlConditions: params.accessControlConditions,
+      unifiedAccessControlConditions: params.unifiedAccessControlConditions,
       dataToEncrypt: params.dataToEncrypt,
+      chain: params.chain ?? "ethereum",
     });
   }
 
   /**
    * Decrypt data using Lit Protocol's decentralized decryption.
    * The caller must satisfy the access control conditions used during encryption.
+   *
+   * v8: Uses litClient.decrypt() with the combined `data` object from encrypt(),
+   * or individual ciphertext/dataToEncryptHash fields.
    */
   async decrypt(params: {
-    accessControlConditions: AccessControlCondition[];
-    ciphertext: string;
-    dataToEncryptHash: string;
+    unifiedAccessControlConditions: AccessControlCondition[];
+    /** Combined encrypted data object from encrypt(). If provided, ciphertext/dataToEncryptHash are ignored. */
+    data?: { ciphertext: string; dataToEncryptHash: string };
+    /** Individual ciphertext (required if data is not provided) */
+    ciphertext?: string;
+    /** Individual hash (required if data is not provided) */
+    dataToEncryptHash?: string;
     authContext: unknown;
+    chain?: string;
   }): Promise<string> {
     if (!this.connected || !this.litClient) {
       throw new Error("LitClient not connected. Call connect() first.");
@@ -232,21 +246,25 @@ export class LitClient {
 
     const client = this.litClient as {
       decrypt: (args: {
-        accessControlConditions: AccessControlCondition[];
-        ciphertext: string;
-        dataToEncryptHash: string;
+        data?: { ciphertext: string; dataToEncryptHash: string };
+        ciphertext?: string;
+        dataToEncryptHash?: string;
+        unifiedAccessControlConditions: AccessControlCondition[];
         authContext: unknown;
-      }) => Promise<{ decryptedString: string }>;
+        chain: string;
+      }) => Promise<{ decryptedData: Uint8Array; decryptedString?: string }>;
     };
 
     const result = await client.decrypt({
-      accessControlConditions: params.accessControlConditions,
-      ciphertext: params.ciphertext,
-      dataToEncryptHash: params.dataToEncryptHash,
+      ...(params.data
+        ? { data: params.data }
+        : { ciphertext: params.ciphertext, dataToEncryptHash: params.dataToEncryptHash }),
+      unifiedAccessControlConditions: params.unifiedAccessControlConditions,
       authContext: params.authContext,
+      chain: params.chain ?? "ethereum",
     });
 
-    return result.decryptedString;
+    return result.decryptedString ?? new TextDecoder().decode(result.decryptedData);
   }
 
   /**

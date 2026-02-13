@@ -1,6 +1,6 @@
 {
   "name": "@policy-kit/sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TypeScript SDK for PolicyKit — decentralized policies-as-code for smart accounts and agents",
   "license": "MIT",
   "type": "module",
