@@ -132,6 +132,9 @@ export function isEncryptedEnvelope(
  * Encrypt a policy using the Lit Protocol and return an envelope
  * suitable for pinning to IPFS.
  *
+ * v8: Uses unifiedAccessControlConditions and chain parameter.
+ * Encryption does NOT require authContext.
+ *
  * @param litClient - Connected LitClient instance (must expose encrypt())
  * @param policy - Policy JSON to encrypt
  * @param options - Encryption options (owner, PKP, chain, optional custom ACCs)
@@ -140,26 +143,29 @@ export function isEncryptedEnvelope(
 export async function encryptPolicy(
   litClient: {
     encrypt: (params: {
-      accessControlConditions: AccessControlCondition[];
+      unifiedAccessControlConditions: AccessControlCondition[];
       dataToEncrypt: string;
+      chain: string;
     }) => Promise<{ ciphertext: string; dataToEncryptHash: string }>;
   },
   policy: PolicyJSON,
   options: EncryptionOptions
 ): Promise<EncryptedPolicyEnvelope> {
+  const chain = options.chain ?? "ethereum";
   const accs =
     options.accessControlConditions ??
     buildOwnerAndPkpACCs(
       options.ownerAddress,
       options.pkpAddress,
-      options.chain ?? "ethereum"
+      chain
     );
 
   const plaintext = serializePolicy(policy);
 
   const { ciphertext, dataToEncryptHash } = await litClient.encrypt({
-    accessControlConditions: accs,
+    unifiedAccessControlConditions: accs,
     dataToEncrypt: plaintext,
+    chain,
   });
 
   return {
@@ -173,6 +179,9 @@ export async function encryptPolicy(
 /**
  * Decrypt an encrypted policy envelope using the Lit Protocol.
  *
+ * v8: Uses unifiedAccessControlConditions, chain parameter, and
+ * supports both combined data object and individual ciphertext/hash fields.
+ *
  * @param litClient - Connected LitClient instance (must expose decrypt())
  * @param envelope - Encrypted envelope fetched from IPFS
  * @param authContext - Lit auth context for decryption authorization
@@ -181,20 +190,22 @@ export async function encryptPolicy(
 export async function decryptPolicy(
   litClient: {
     decrypt: (params: {
-      accessControlConditions: AccessControlCondition[];
+      unifiedAccessControlConditions: AccessControlCondition[];
       ciphertext: string;
       dataToEncryptHash: string;
       authContext: unknown;
+      chain: string;
     }) => Promise<string>;
   },
   envelope: EncryptedPolicyEnvelope,
   authContext: unknown
 ): Promise<PolicyJSON> {
   const plaintext = await litClient.decrypt({
-    accessControlConditions: envelope.accessControlConditions,
+    unifiedAccessControlConditions: envelope.accessControlConditions,
     ciphertext: envelope.ciphertext,
     dataToEncryptHash: envelope.dataToEncryptHash,
     authContext,
+    chain: "ethereum",
   });
 
   return deserializePolicy(plaintext);
